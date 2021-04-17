@@ -1,9 +1,9 @@
-codeName: example
-codeLabel: EXAMPLE
-codeLabelStyle: All in capitals
-codeUrl: https://www.example.eu/
-parserDirName: dependencies/parsers/example/
-parserGitUrl: https://github.com/nomad-coe/nomad-parser-example.git
+codeName: openmx
+codeLabel: OpenMX
+codeLabelStyle: First and last two characters in capitals
+codeUrl: http://www.openmx-square.org/
+parserDirName: dependencies/parsers/openmx/
+parserGitUrl: https://github.com/nomad-coe/nomad-parser-openmx.git
 preamble: |
   This is not a real parser, but an example template on how to write one. You can fork this repository to create actual parsers.
 

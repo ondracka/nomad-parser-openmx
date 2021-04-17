@@ -60,13 +60,12 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
 ])
 
 
-class ExampleParser(FairdiParser):
+class OpenmxParser(FairdiParser):
     def __init__(self):
         super().__init__(
-            name='parsers/example', code_name='EXAMPLE', code_homepage='https://www.example.eu/',
-            mainfile_mime_re=r'(application/.*)|(text/.*)',
+            name='parsers/openmx', code_name='OpenMX', code_homepage='http://www.openmx-square.org/',
+            mainfile_mime_re=r'(text/.*)',
             mainfile_contents_re=(r'^\s*#\s*This is example output'),
-            supported_compressions=['gz', 'bz2', 'xz']
         )
 
     def run(self, mainfile: str, archive: EntryArchive, logger):
