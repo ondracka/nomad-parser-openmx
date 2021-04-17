@@ -51,8 +51,8 @@ calculation_parser = UnstructuredTextFileParser(quantities=[
     Quantity('magic_source', r'done with magic source\s*\*{3}\s*\*{3}\s*[^\d]*(\d+)', repeats=False)])
 
 mainfile_parser = UnstructuredTextFileParser(quantities=[
+    Quantity('program_version', r'This calculation was performed by OpenMX Ver. ([\d\.]+)\s*', repeats=False),
     Quantity('date', r'(\d\d\d\d\/\d\d\/\d\d)', repeats=False),
-    Quantity('program_version', r'super\_code\s*v(\d+)\s*', repeats=False),
     Quantity(
         'calculation', r'\s*system \d+([\s\S]+?energy: [\d\.]+)([\s\S]+\*\*\*)*',
         sub_parser=calculation_parser,
@@ -78,25 +78,5 @@ class OpenmxParser(FairdiParser):
 
         # Output all parsed data into the given archive.
         run = archive.m_create(Run)
-        run.program_name = 'super_code'
+        run.program_name = 'OpenMX'
         run.program_version = str(mainfile_parser.get('program_version'))
-        date = datetime.datetime.strptime(
-            mainfile_parser.get('date'),
-            '%Y/%m/%d') - datetime.datetime(1970, 1, 1)
-        run.program_compilation_datetime = date.total_seconds()
-
-        for calculation in mainfile_parser.get('calculation'):
-            system = run.m_create(System)
-
-            system.lattice_vectors = calculation.get('lattice_vectors')
-            sites = calculation.get('sites')
-            system.atom_labels = [site[0] for site in sites]
-            system.atom_positions = [site[1] for site in sites]
-
-            scc = run.m_create(SCC)
-            scc.single_configuration_calculation_to_system_ref = system
-            scc.energy_total = calculation.get('energy') * units.eV
-            scc.single_configuration_calculation_to_system_ref = system
-            magic_source = calculation.get('magic_source')
-            if magic_source is not None:
-                scc.x_example_magic_value = magic_source

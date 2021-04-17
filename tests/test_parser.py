@@ -21,19 +21,17 @@ import logging
 
 from nomad.datamodel import EntryArchive
 
-from exampleparser import ExampleParser
+from openmxparser import OpenmxParser
 
 
 @pytest.fixture
 def parser():
-    return ExampleParser()
+    return OpenmxParser()
 
 
-def test_example(parser):
+def test_openmx(parser):
     archive = EntryArchive()
-    parser.run('tests/data/example.out', archive, logging)
+    parser.run('tests/data/HfO2_single_point/m-HfO2.out', archive, logging)
 
     run = archive.section_run[0]
-    assert len(run.section_system) == 2
-    assert len(run.section_single_configuration_calculation) == 2
-    assert run.section_single_configuration_calculation[0].x_example_magic_value == 42
+    assert run.program_version == '3.9.2'
