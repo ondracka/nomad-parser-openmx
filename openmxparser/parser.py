@@ -23,6 +23,7 @@ from nomad.datamodel import EntryArchive
 from nomad.parsing import FairdiParser
 from nomad.units import ureg as units
 from nomad.datamodel.metainfo.public import section_run as Run
+from nomad.datamodel.metainfo.public import section_scf_iteration as SCF
 from nomad.datamodel.metainfo.public import section_system as System
 from nomad.datamodel.metainfo.public import section_single_configuration_calculation as SCC
 
@@ -40,25 +41,23 @@ def str_to_sites(string):
     pos = np.array(pos.split(')')[0].split(',')[:3], dtype=float)
     return sym, pos
 
+scf_step_parser = UnstructuredTextFileParser(quantities=[
+    Quantity('scf_step_number', r'   SCF=\s*(\d+)', repeats=False),
+    Quantity('norm_rd', r'NormRD=\s*([\d\.]+)', repeats=False),
+    Quantity('ene', r'Uele=\s*([-\d\.]+)', repeats=False)
+    ])
 
-calculation_parser = UnstructuredTextFileParser(quantities=[
-    Quantity('sites', r'([A-Z]\([\d\.\, \-]+\))', str_operation=str_to_sites, repeats=True),
-    Quantity(
-        System.lattice_vectors,
-        r'(?:latice|cell): \((\d)\, (\d), (\d)\)\,?\s*\((\d)\, (\d), (\d)\)\,?\s*\((\d)\, (\d), (\d)\)\,?\s*',
-        repeats=False),
-    Quantity('energy', r'energy: (\d\.\d+)'),
-    Quantity('magic_source', r'done with magic source\s*\*{3}\s*\*{3}\s*[^\d]*(\d+)', repeats=False)])
+md_step_parser = UnstructuredTextFileParser(quantities=[
+    Quantity('scf_step', r'   (SCF=.+?Uele=\s*[-\d\.]+)', sub_parser=scf_step_parser, repeats=True)
+    ])
 
 mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('program_version', r'This calculation was performed by OpenMX Ver. ([\d\.]+)\s*', repeats=False),
-    Quantity('date', r'(\d\d\d\d\/\d\d\/\d\d)', repeats=False),
     Quantity(
-        'calculation', r'\s*system \d+([\s\S]+?energy: [\d\.]+)([\s\S]+\*\*\*)*',
-        sub_parser=calculation_parser,
-        repeats=True)
-])
-
+        'md_step', r'(SCF history at MD[\s\S]+?Chemical potential \(Hartree\)\s+[-\d\.]+)',
+        sub_parser=md_step_parser,
+        repeats=True),
+    ])
 
 class OpenmxParser(FairdiParser):
     def __init__(self):
@@ -69,8 +68,6 @@ class OpenmxParser(FairdiParser):
         )
 
     def run(self, mainfile: str, archive: EntryArchive, logger):
-        # Log a hello world, just to get us started. TODO remove from an actual parser.
-        logger.info('Hello World')
 
         # Use the previously defined parsers on the given mainfile
         mainfile_parser.mainfile = mainfile
@@ -80,3 +77,16 @@ class OpenmxParser(FairdiParser):
         run = archive.m_create(Run)
         run.program_name = 'OpenMX'
         run.program_version = str(mainfile_parser.get('program_version'))
+
+        md_steps = mainfile_parser.get('md_step')
+        if md_steps is not None:
+            for md_step in md_steps:
+                scc = run.m_create(SCC)
+                scf_steps = md_step.get('scf_step')
+                if scf_steps is not None:
+                    for scf_step in scf_steps:
+                        scf = scc.m_create(SCF)
+                        ene = scf_step.get('ene')
+                        if ene is not None:
+                            #FIXME: double check that this is indeed the total energy
+                            scf.energy_total_scf_iteration = ene * units.hartree
