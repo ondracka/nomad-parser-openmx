@@ -101,16 +101,16 @@ class OpenmxParser(FairdiParser):
         system.atom_positions = [[a[1] * A, a[2] * A, a[3] * A] for a in atoms]
 
         scf_XcType = mainfile_parser.get('scf_XcType')
-        print('scf.XcType is: ',scf_XcType)
+        print('\n\n\tscf.XcType is: ',scf_XcType)
         method = run.m_create(Method)
         scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
-        print('scf.SpinPolarization Type is: ',scf_SpinPolarizationType)
+        print('\n\tscf.SpinPolarization Type is: ',scf_SpinPolarizationType)
         if scf_SpinPolarizationType.lower() == 'on':
             method.number_of_spin_channels = 2
         else :
             method.number_of_spin_channels = 1
              
-        print ('number of spin channels is: ',method.number_of_spin_channels) 
+        print ('\tnumber of spin channels is: ',method.number_of_spin_channels,'\n\n') 
 
         md_steps = mainfile_parser.get('md_step')
         if md_steps is not None:
