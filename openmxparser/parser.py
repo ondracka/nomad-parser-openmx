@@ -69,6 +69,9 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
         'input_atoms', r'<Atoms.SpeciesAndCoordinates([\s\S]+)Atoms.SpeciesAndCoordinates>',
         sub_parser=input_atoms_parser,
         repeats=False),
+    Quantity('scf_XcType', r'scf.XcType                    (\S+)', repeats=False),
+    Quantity('scf_SpinPolarization', r'scf.SpinPolarization          (\S+)', repeats=False)
+
     ])
 
 
@@ -96,6 +99,18 @@ class OpenmxParser(FairdiParser):
         print(atoms)
         system = run.m_create(System)
         system.atom_positions = [[a[1] * A, a[2] * A, a[3] * A] for a in atoms]
+
+        scf_XcType = mainfile_parser.get('scf_XcType')
+        print('scf.XcType is: ',scf_XcType)
+        method = run.m_create(Method)
+        scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
+        print('scf.SpinPolarization Type is: ',scf_SpinPolarizationType)
+        if scf_SpinPolarizationType.lower() == 'on':
+            method.number_of_spin_channels = 2
+        else :
+            method.number_of_spin_channels = 1
+             
+        print ('number of spin channels is: ',method.number_of_spin_channels) 
 
         md_steps = mainfile_parser.get('md_step')
         if md_steps is not None:
