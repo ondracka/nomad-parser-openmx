@@ -30,3 +30,5 @@ class ExampleSCC(SCC):
     # We define an additional example quantity. Use the prefix x_<parsername>_ to denote
     # non common quantities.
     x_example_magic_value = Quantity(type=int, description='The magic value from a magic source.')
+
+    # program_basis_set_type = Quantity(type=str, description= 'should be always "Numeric AOs"')
