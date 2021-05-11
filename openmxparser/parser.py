@@ -92,6 +92,7 @@ class OpenmxParser(FairdiParser):
         run = archive.m_create(Run)
         run.program_name = 'OpenMX'
         run.program_version = str(mainfile_parser.get('program_version'))
+        run.program_basis_set_type = "Numeric AOs"
 
         input_atoms = mainfile_parser.get('input_atoms')
         atoms = input_atoms.get('atom')
