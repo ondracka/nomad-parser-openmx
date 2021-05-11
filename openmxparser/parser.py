@@ -94,7 +94,6 @@ class OpenmxParser(FairdiParser):
 
         input_atoms = mainfile_parser.get('input_atoms')
         atoms = input_atoms.get('atom')
-        print(atoms)
         system = run.m_create(System)
         system.atom_positions = [[a[1] * A, a[2] * A, a[3] * A] for a in atoms]
 
