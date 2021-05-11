@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import datetime
 import numpy as np
 
 from nomad.datamodel import EntryArchive
