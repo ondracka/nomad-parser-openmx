@@ -40,6 +40,8 @@ def test_openmx(parser):
     scf = scc[0].section_scf_iteration
     assert len(scf) == 24
     scf[3].energy_total_scf_iteration == pytest.approx(-3.916702417016777e-16)
+    method = run.section_method[0]
+    assert method.number_of_spin_channels == 1
 
     archive = EntryArchive()
     parser.run('tests/data/AlN_ionic_optimization/AlN.out', archive, logging)
@@ -54,3 +56,5 @@ def test_openmx(parser):
     scf = scc[3].section_scf_iteration
     assert len(scf) == 6
     scf[5].energy_total_scf_iteration == pytest.approx(-3.4038520917173614e-17)
+    method = run.section_method[0]
+    assert method.number_of_spin_channels == 1
