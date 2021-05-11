@@ -98,7 +98,6 @@ class OpenmxParser(FairdiParser):
         system = run.m_create(System)
         system.atom_positions = [[a[1] * A, a[2] * A, a[3] * A] for a in atoms]
 
-        scf_XcType = mainfile_parser.get('scf_XcType')
         method = run.m_create(Method)
         scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
         if scf_SpinPolarizationType.lower() == 'on':
