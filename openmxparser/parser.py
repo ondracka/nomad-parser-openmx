@@ -48,16 +48,16 @@ scf_step_parser = UnstructuredTextFileParser(quantities=[
     Quantity('scf_step_number', r'   SCF=\s*(\d+)', repeats=False),
     Quantity('norm_rd', r'NormRD=\s*([\d\.]+)', repeats=False),
     Quantity('ene', r'Uele=\s*([-\d\.]+)', repeats=False)
-    ])
+])
 
 md_step_parser = UnstructuredTextFileParser(quantities=[
     Quantity('scf_step', r'   (SCF=.+?Uele=\s*[-\d\.]+)', sub_parser=scf_step_parser, repeats=True)
-    ])
+])
 
 input_atoms_parser = UnstructuredTextFileParser(quantities=[
     Quantity('atom', r'\s*\d+\s*([A-Za-z]{1,2})\s*([-\d\.]+)\s+([-\d\.]+)\s+([-\d\.]+)\s+[\d\.]+\s*[\d\.]+\s*',
              repeats=True)
-    ])
+])
 
 mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('program_version', r'This calculation was performed by OpenMX Ver. ([\d\.]+)\s*', repeats=False),
@@ -71,7 +71,7 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
         repeats=False),
     Quantity('scf_XcType', r'scf.XcType\s+(\S+)', repeats=False),
     Quantity('scf_SpinPolarization', r'scf.SpinPolarization\s+(\S+)', repeats=False)
-    ])
+])
 
 
 class OpenmxParser(FairdiParser):
