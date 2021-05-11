@@ -38,6 +38,7 @@ def test_HfO2(parser):
 
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
+    assert run.program_basis_set_type == 'Numeric AOs'
     scc = run.section_single_configuration_calculation
     assert len(scc) == 1
     scf = scc[0].section_scf_iteration
@@ -57,6 +58,7 @@ def test_AlN(parser):
 
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
+    assert run.program_basis_set_type == 'Numeric AOs'
     scc = run.section_single_configuration_calculation
     assert len(scc) == 5
     scf = scc[0].section_scf_iteration
