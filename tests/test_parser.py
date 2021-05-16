@@ -45,6 +45,7 @@ def test_HfO2(parser):
     scf[3].energy_total_scf_iteration == pytest.approx(-3.916702417016777e-16)
     method = run.section_method[0]
     assert method.number_of_spin_channels == 1
+    assert method.electronic_structure_method == 'DFT'
 
 
 def test_AlN(parser):
@@ -66,3 +67,4 @@ def test_AlN(parser):
     scf[5].energy_total_scf_iteration == pytest.approx(-3.4038520917173614e-17)
     method = run.section_method[0]
     assert method.number_of_spin_channels == 1
+    assert method.electronic_structure_method == 'DFT'

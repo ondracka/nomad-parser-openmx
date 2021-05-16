@@ -69,7 +69,8 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
         sub_parser=input_atoms_parser,
         repeats=False),
     Quantity('scf_XcType', r'scf.XcType\s+(\S+)', repeats=False),
-    Quantity('scf_SpinPolarization', r'scf.SpinPolarization\s+(\S+)', repeats=False)
+    Quantity('scf_SpinPolarization', r'scf.SpinPolarization\s+(\S+)', repeats=False),
+    Quantity('scf_hubbard_u', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
 ])
 
 
@@ -98,6 +99,14 @@ class OpenmxParser(FairdiParser):
         system.atom_positions = [[a[1] * A, a[2] * A, a[3] * A] for a in atoms]
 
         method = run.m_create(Method)
+
+        method.electronic_structure_method = 'DFT'
+        # FIXME: add some testcase for DFT+U
+        scf_hubbard_u = mainfile_parser.get('scf_hubbard_u')
+        if scf_hubbard_u is not None:
+            if mainfile_parser.get('scf_hubbard_u').lower == 'on':
+                method.electronic_structure_method = 'DFT+U'
+
         scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
         if scf_SpinPolarizationType.lower() == 'on':
             method.number_of_spin_channels = 2
