@@ -29,7 +29,10 @@ def parser():
     return OpenmxParser()
 
 
-def test_openmx(parser):
+def test_HfO2(parser):
+    '''
+    Simple single point calculation monoclinic HfO2 test case.
+    '''
     archive = EntryArchive()
     parser.parse('tests/data/HfO2_single_point/m-HfO2.out', archive, logging)
 
@@ -43,6 +46,11 @@ def test_openmx(parser):
     method = run.section_method[0]
     assert method.number_of_spin_channels == 1
 
+
+def test_AlN(parser):
+    '''
+    Geometry optimization (atomic positions only) AlN test case.
+    '''
     archive = EntryArchive()
     parser.parse('tests/data/AlN_ionic_optimization/AlN.out', archive, logging)
 
