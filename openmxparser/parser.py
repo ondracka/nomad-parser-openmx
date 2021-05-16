@@ -28,10 +28,10 @@ from nomad.datamodel.metainfo.public import section_single_configuration_calcula
 from nomad.datamodel.metainfo.public import section_method as Method
 from nomad.parsing.file_parser import UnstructuredTextFileParser, Quantity
 
-from . import metainfo  # pylint: disable=unused-import
+from .metainfo.openmx import OpenmxSCC  # pylint: disable=unused-import
 
 '''
-This is a hello world style example for an example parser/converter.
+This is parser for OpenMX DFT code.
 '''
 
 A = (1 * units.angstrom).to_base_units().magnitude
@@ -81,7 +81,7 @@ class OpenmxParser(FairdiParser):
             mainfile_contents_re=(r'^\s*#\s*This is example output'),
         )
 
-    def run(self, mainfile: str, archive: EntryArchive, logger):
+    def parse(self, mainfile: str, archive: EntryArchive, logger):
 
         # Use the previously defined parsers on the given mainfile
         mainfile_parser.mainfile = mainfile

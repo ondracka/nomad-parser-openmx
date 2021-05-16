@@ -31,7 +31,7 @@ def parser():
 
 def test_openmx(parser):
     archive = EntryArchive()
-    parser.run('tests/data/HfO2_single_point/m-HfO2.out', archive, logging)
+    parser.parse('tests/data/HfO2_single_point/m-HfO2.out', archive, logging)
 
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
@@ -44,7 +44,7 @@ def test_openmx(parser):
     assert method.number_of_spin_channels == 1
 
     archive = EntryArchive()
-    parser.run('tests/data/AlN_ionic_optimization/AlN.out', archive, logging)
+    parser.parse('tests/data/AlN_ionic_optimization/AlN.out', archive, logging)
 
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
