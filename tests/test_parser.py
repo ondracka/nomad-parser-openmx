@@ -45,8 +45,12 @@ def test_HfO2(parser):
     assert len(scf) == 24
     scf[3].energy_total_scf_iteration == pytest.approx(-3.916702417016777e-16)
     method = run.section_method[0]
+    section_XC_functionals1 = method.section_XC_functionals[0]
+    section_XC_functionals2 = method.section_XC_functionals[1]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
+    assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
 
 
 def test_AlN(parser):
@@ -68,5 +72,9 @@ def test_AlN(parser):
     assert len(scf) == 6
     scf[5].energy_total_scf_iteration == pytest.approx(-3.4038520917173614e-17)
     method = run.section_method[0]
+    section_XC_functionals1 = method.section_XC_functionals[0]
+    section_XC_functionals2 = method.section_XC_functionals[1]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
+    assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
