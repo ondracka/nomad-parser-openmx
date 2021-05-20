@@ -26,6 +26,7 @@ from nomad.datamodel.metainfo.public import section_scf_iteration as SCF
 from nomad.datamodel.metainfo.public import section_system as System
 from nomad.datamodel.metainfo.public import section_single_configuration_calculation as SCC
 from nomad.datamodel.metainfo.public import section_method as Method
+from nomad.datamodel.metainfo.public import section_XC_functionals as xc_functionals
 from nomad.parsing.file_parser import UnstructuredTextFileParser, Quantity
 
 from .metainfo.openmx import OpenmxSCC  # pylint: disable=unused-import
@@ -106,6 +107,24 @@ class OpenmxParser(FairdiParser):
         if scf_hubbard_u is not None:
             if mainfile_parser.get('scf_hubbard_u').lower == 'on':
                 method.electronic_structure_method = 'DFT+U'
+
+        section_XC_functionals1 = method.m_create(xc_functionals)
+        section_XC_functionals2 = method.m_create(xc_functionals)
+
+        scf_XcType = mainfile_parser.get('scf_XcType')
+        if scf_XcType is not None:
+            if mainfile_parser.get('scf_XcType').upper() == 'GGA-PBE':
+                section_XC_functionals1.XC_functional_name = 'GGA_C_PBE'
+                section_XC_functionals2.XC_functional_name = 'GGA_X_PBE'
+            elif mainfile_parser.get('scf_XcType').upper() == 'LDA' or 'LSDA-CA':
+                section_XC_functionals1.XC_functional_name = 'LDA_X'
+                section_XC_functionals2.XC_functional_name = 'LDA_C_PZ'
+            elif mainfile_parser.get('scf_XcType').upper() == 'LSDA-PW':
+                section_XC_functionals1.XC_functional_name = 'LDA_X'
+                section_XC_functionals2.XC_functional_name = 'LDA_C_PW'
+        else:
+            section_XC_functionals1.XC_functional_name = 'LDA_X'
+            section_XC_functionals2.XC_functional_name = 'LDA_C_PZ'
 
         scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
         if scf_SpinPolarizationType.lower() == 'on':
