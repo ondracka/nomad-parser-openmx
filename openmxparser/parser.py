@@ -99,7 +99,8 @@ class OpenmxParser(FairdiParser):
         super().__init__(
             name='parsers/openmx', code_name='OpenMX', code_homepage='http://www.openmx-square.org/',
             mainfile_mime_re=r'(text/.*)',
-            mainfile_contents_re=(r'^\s*#\s*This is example output'),
+            mainfile_name_re=r'.*\.out$',
+            mainfile_contents_re=(r'^\*{59}\s+\*{59}\s+This calculation was performed by OpenMX'),
         )
 
     def parse(self, mainfile: str, archive: EntryArchive, logger):
