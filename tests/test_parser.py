@@ -53,7 +53,7 @@ def test_HfO2(parser):
     assert len(scc) == 1
     scf = scc[0].section_scf_iteration
     assert len(scf) == 24
-    scf[3].energy_total_scf_iteration == pytest.approx(-3.916702417016777e-16)
+    scf[3].energy_sum_eigenvalues_scf_iteration == approx(-3.916702417016777e-16)
 
     method = run.section_method[0]
     section_XC_functionals1 = method.section_XC_functionals[0]
@@ -90,10 +90,10 @@ def test_AlN(parser):
     assert len(scc) == 5
     scf = scc[0].section_scf_iteration
     assert len(scf) == 21
-    scf[20].energy_total_scf_iteration == pytest.approx(-3.4038353611878345e-17)
+    scf[20].energy_sum_eigenvalues_scf_iteration == approx(-3.4038353611878345e-17)
     scf = scc[3].section_scf_iteration
     assert len(scf) == 6
-    scf[5].energy_total_scf_iteration == pytest.approx(-3.4038520917173614e-17)
+    scf[5].energy_sum_eigenvalues_scf_iteration == approx(-3.4038520917173614e-17)
 
     method = run.section_method[0]
     section_XC_functionals1 = method.section_XC_functionals[0]
