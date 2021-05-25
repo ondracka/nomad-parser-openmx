@@ -17,6 +17,7 @@
 #
 
 import numpy as np
+from os import path
 
 from nomad.datamodel import EntryArchive
 from nomad.parsing import FairdiParser
@@ -62,9 +63,31 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
         'input_atoms', r'<Atoms.SpeciesAndCoordinates([\s\S]+)Atoms.SpeciesAndCoordinates>',
         sub_parser=input_atoms_parser,
         repeats=False),
+    Quantity(
+        'input_lattice_vectors', r'(?i)<Atoms.UnitVectors\s+((?:-?\d+\.\d+\s+)+)Atoms.UnitVectors>',
+        repeats=False),
     Quantity('scf_XcType', r'scf.XcType\s+(\S+)', repeats=False),
     Quantity('scf_SpinPolarization', r'scf.SpinPolarization\s+(\S+)', repeats=False),
+    Quantity('atoms_coordinates_units',
+             r'(?i)Atoms.SpeciesAndCoordinates.Unit\s+([a-z]{2,4})', repeats=False),
+    Quantity('lattice_vectors_units',
+             r'(?i)Atoms.UnitVectors.Unit\s+([a-z]{2,3})', repeats=False),
     Quantity('scf_hubbard_u', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
+])
+
+mdfile_parser = UnstructuredTextFileParser(quantities=[
+    Quantity(
+        'md_step', r'(\d+\s+time.+\s+(?:[A-Za-z]{1,2}\s+(?:-?\d+\.\d+\s+)+)+)',
+        sub_parser=UnstructuredTextFileParser(quantities=[
+            Quantity(
+                'cell_vectors',
+                r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)',
+                repeats=False),
+            Quantity(
+                'atoms', r'\s+([A-Za-z]{1,2}(?:\s+-?\d+\.\d+)+)',
+                repeats=True)
+        ]),
+        repeats=True),
 ])
 
 
@@ -82,18 +105,18 @@ class OpenmxParser(FairdiParser):
         mainfile_parser.mainfile = mainfile
         mainfile_parser.parse()
 
-        # Output all parsed data into the given archive.
+        # Get system from the MD file
+        md_file = path.splitext(mainfile)[0] + '.md'
+        if path.isfile(md_file):
+            mdfile_parser.mainfile = md_file
+            mdfile_parser.parse()
+
+        # Some basic values
         run = archive.m_create(Run)
         run.program_name = 'OpenMX'
         run.program_version = str(mainfile_parser.get('program_version'))
 
-        input_atoms = mainfile_parser.get('input_atoms')
-        atoms = input_atoms.get('atom')
-        system = run.m_create(System)
-        system.atom_positions = [[a[1] * A, a[2] * A, a[3] * A] for a in atoms]
-
         method = run.m_create(Method)
-
         method.electronic_structure_method = 'DFT'
         # FIXME: add some testcase for DFT+U
         scf_hubbard_u = mainfile_parser.get('scf_hubbard_u')
@@ -125,10 +148,83 @@ class OpenmxParser(FairdiParser):
         else:
             method.number_of_spin_channels = 1
 
-        md_steps = mainfile_parser.get('md_step')
-        if md_steps is not None:
-            for md_step in md_steps:
+        mainfile_md_steps = mainfile_parser.get('md_step')
+        if mainfile_md_steps is not None:
+            n_md_steps = len(mainfile_md_steps)
+        mdfile_md_steps = mdfile_parser.get('md_step')
+        if mdfile_md_steps is not None:
+            n_mdfile_md_steps = len(mdfile_md_steps)
+        # Do some consistency checks between the out and md file.
+        ignore_md_file = False
+        if n_mdfile_md_steps > n_md_steps:
+            # This can happen when user runs two calculations in the same directory.
+            # In that case the out file contains the latter calculation but the md file
+            # would contain both calculations, so just take the corresponding number
+            # of steps from the end of the file.
+            mdfile_md_steps = mdfile_md_steps[-n_md_steps:]
+        elif n_mdfile_md_steps < n_md_steps:
+            # This is unlikely, but signals a problem with the md file, so just
+            # ignore it.
+            ignore_md_file = True
+            logger.warning(".md file does not contain enough MD steps")
+
+        if mainfile_md_steps is not None:
+            for i, md_step in enumerate(mainfile_md_steps):
+                system = run.m_create(System)
+                if not ignore_md_file:
+                    cell = mdfile_md_steps[i].get('cell_vectors')
+                    system.lattice_vectors = np.array(cell).reshape(3, 3) * units.angstrom
+                    system.configuration_periodic_dimensions = [True, True, True]
+                    atoms = mdfile_md_steps[i].get('atoms')
+                    if atoms is not None:
+                        system.atom_positions = np.array([a[1:4] for a in atoms]) * units.angstrom
+                        system.atom_labels = [a[0] for a in atoms]
+                if i == 0:
+                    # Get the initial and final position from out file, it has better precision
+                    # and we also have some fallback if the md file is missing.
+                    atoms_units = mainfile_parser.get('atoms_coordinates_units')
+                    lattice_vectors = mainfile_parser.get('input_lattice_vectors')
+                    lattice_units = mainfile_parser.get('lattice_vectors_units')
+                    atoms = mainfile_parser.get('input_atoms').get('atom')
+
+                    if atoms is not None and lattice_vectors is not None:
+                        lattice_vectors = np.array(lattice_vectors).reshape(3, 3)
+                        if atoms_units is not None:
+                            if lattice_units.lower() == 'au':
+                                lattice_vectors = lattice_vectors * units.bohr
+                                lattice_units = units.bohr
+                            elif lattice_units.lower() == 'ang':
+                                lattice_vectors = lattice_vectors * units.angstrom
+                                lattice_units = units.angstrom
+                        else:
+                            lattice_vectors = lattice_vectors * units.angstrom
+                        atom_positions = [a[1:4] for a in atoms]
+                        if atoms_units is not None:
+                            if atoms_units.lower() == 'au':
+                                atom_positions = atom_positions * units.bohr
+                            if atoms_units.lower() == 'ang':
+                                atom_positions = atom_positions * units.angstrom
+                            elif atoms_units.lower() == 'frac':
+                                # There are some problems with pint here so simple matrix vector multiplications
+                                # doesn't work.
+                                atom_positions = np.array([np.array(pos).dot(lattice_vectors)
+                                                          for pos in atom_positions]) * lattice_units
+                        else:
+                            # default unit is angstrom
+                            atom_positions = atom_positions * units.bohr
+                        system.atom_positions = atom_positions
+                        system.lattice_vectors = lattice_vectors
+                        system.configuration_periodic_dimensions = [True, True, True]
+                        system.atom_labels = [a[0] for a in atoms]
+                    else:
+                        logger.warning('Failed to parse the input structure.')
+
+                if i == n_md_steps - 1:
+                    logger.warning("Not implemented")
+
                 scc = run.m_create(SCC)
+                scc.single_configuration_calculation_to_system_ref = system
+                scc.single_configuration_to_calculation_method_ref = method
                 scf_steps = md_step.get('scf_step')
                 if scf_steps is not None:
                     for scf_step in scf_steps:
