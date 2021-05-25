@@ -42,7 +42,7 @@ A = (1 * units.angstrom).to_base_units().magnitude
 scf_step_parser = UnstructuredTextFileParser(quantities=[
     Quantity('scf_step_number', r'   SCF=\s*(\d+)', repeats=False),
     Quantity('norm_rd', r'NormRD=\s*([\d\.]+)', repeats=False),
-    Quantity('ene', r'Uele=\s*([-\d\.]+)', repeats=False)
+    Quantity('u_ele', r'Uele=\s*([-\d\.]+)', repeats=False)
 ])
 
 md_step_parser = UnstructuredTextFileParser(quantities=[
@@ -257,7 +257,6 @@ class OpenmxParser(FairdiParser):
                 if scf_steps is not None:
                     for scf_step in scf_steps:
                         scf = scc.m_create(SCF)
-                        ene = scf_step.get('ene')
-                        if ene is not None:
-                            # FIXME: double check that this is indeed the total energy
-                            scf.energy_total_scf_iteration = ene * units.hartree
+                        u_ele = scf_step.get('u_ele')
+                        if u_ele is not None:
+                            scf.energy_sum_eigenvalues_scf_iteration = u_ele * units.hartree
