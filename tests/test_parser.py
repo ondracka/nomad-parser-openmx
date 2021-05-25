@@ -20,6 +20,7 @@ import pytest
 import logging
 
 from nomad.datamodel import EntryArchive
+from nomad.units import ureg as units
 
 from openmxparser import OpenmxParser
 
@@ -27,6 +28,16 @@ from openmxparser import OpenmxParser
 @pytest.fixture
 def parser():
     return OpenmxParser()
+
+
+def A_to_m(value):
+    return (value * units.angstrom).to_base_units().magnitude
+
+
+# default pytest.approx settings are abs=1e-12, rel=1e-6 so it doesn't work for small numbers
+# use the default just for comparison with zero
+def approx(value):
+    return pytest.approx(value, abs=0, rel=1e-6)
 
 
 def test_HfO2(parser):
@@ -51,6 +62,17 @@ def test_HfO2(parser):
     assert method.electronic_structure_method == 'DFT'
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+
+    system = run.section_system[0]
+    assert all([a == b for a, b in zip(system.configuration_periodic_dimensions,
+                                       [True, True, True])])
+    assert system.lattice_vectors[0][0].magnitude == approx(A_to_m(5.1156000))
+    assert system.lattice_vectors[2][2].magnitude == approx(A_to_m(5.2269843))
+    assert len(system.atom_positions) == 12
+    assert system.atom_positions[5][0].magnitude == approx(A_to_m(-0.3293636))
+    assert system.atom_positions[11][2].magnitude == approx(A_to_m(2.6762159))
+    assert len(system.atom_labels) == 12
+    assert system.atom_labels[9] == 'O'
 
 
 def test_AlN(parser):
@@ -78,3 +100,31 @@ def test_AlN(parser):
     assert method.electronic_structure_method == 'DFT'
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+
+    assert len(run.section_system) == 5
+    system = run.section_system[0]
+    assert all([a == b for a, b in zip(system.configuration_periodic_dimensions,
+                                       [True, True, True])])
+    assert system.lattice_vectors[0][0].magnitude == approx(A_to_m(3.109970))
+    assert system.lattice_vectors[1][0].magnitude == approx(A_to_m(-1.5549850))
+    assert len(system.atom_positions) == 4
+    assert system.atom_positions[0][0].magnitude == approx(A_to_m(1.55498655))
+    assert system.atom_positions[3][2].magnitude == approx(A_to_m(4.39210))
+    assert len(system.atom_labels) == 4
+    assert system.atom_labels[3] == 'N'
+    system = run.section_system[3]
+    assert system.lattice_vectors[1][1].magnitude == approx(A_to_m(2.69331))
+    assert system.lattice_vectors[2][2].magnitude == approx(A_to_m(4.98010))
+    assert len(system.atom_positions) == 4
+    assert system.atom_positions[0][1].magnitude == approx(A_to_m(0.89807))
+    assert system.atom_positions[2][2].magnitude == approx(A_to_m(1.90030))
+    assert len(system.atom_labels) == 4
+    assert system.atom_labels[0] == 'Al'
+    system = run.section_system[4]
+    assert system.lattice_vectors[0][0].magnitude == approx(A_to_m(3.10997))
+    assert system.lattice_vectors[2][2].magnitude == approx(A_to_m(4.98010))
+    assert len(system.atom_positions) == 4
+    assert system.atom_positions[0][2].magnitude == approx(A_to_m(0.00253))
+    assert system.atom_positions[3][2].magnitude == approx(A_to_m(4.39015))
+    assert len(system.atom_labels) == 4
+    assert system.atom_labels[1] == 'Al'
