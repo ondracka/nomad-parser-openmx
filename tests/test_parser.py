@@ -34,6 +34,10 @@ def A_to_m(value):
     return (value * units.angstrom).to_base_units().magnitude
 
 
+def Ha_to_J(value):
+    return (value * units.hartree).to_base_units().magnitude
+
+
 # default pytest.approx settings are abs=1e-12, rel=1e-6 so it doesn't work for small numbers
 # use the default just for comparison with zero
 def approx(value):
@@ -52,6 +56,7 @@ def test_HfO2(parser):
     assert run.program_basis_set_type == 'Numeric AOs'
     scc = run.section_single_configuration_calculation
     assert len(scc) == 1
+    assert scc[0].energy_total.magnitude == approx(Ha_to_J(-346.328738171942))
     scf = scc[0].section_scf_iteration
     assert len(scf) == 24
     scf[3].energy_sum_eigenvalues_scf_iteration == approx(-3.916702417016777e-16)
@@ -90,6 +95,8 @@ def test_AlN(parser):
     assert run.program_basis_set_type == 'Numeric AOs'
     scc = run.section_single_configuration_calculation
     assert len(scc) == 5
+    assert scc[0].energy_total.magnitude == approx(Ha_to_J(-25.194346653540))
+    assert scc[4].energy_total.magnitude == approx(Ha_to_J(-25.194358042252))
     scf = scc[0].section_scf_iteration
     assert len(scf) == 21
     scf[20].energy_sum_eigenvalues_scf_iteration == approx(-3.4038353611878345e-17)
