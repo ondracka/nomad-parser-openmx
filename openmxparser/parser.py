@@ -46,7 +46,8 @@ scf_step_parser = UnstructuredTextFileParser(quantities=[
 ])
 
 md_step_parser = UnstructuredTextFileParser(quantities=[
-    Quantity('scf_step', r'   (SCF=.+?Uele=\s*[-\d\.]+)', sub_parser=scf_step_parser, repeats=True)
+    Quantity('scf_step', r'   (SCF=.+?Uele=\s*[-\d\.]+)', sub_parser=scf_step_parser, repeats=True),
+    Quantity('Utot', r'Utot\.\s+(-?\d+\.\d+)', repeats=False)
 ])
 
 input_atoms_parser = UnstructuredTextFileParser(quantities=[
@@ -268,3 +269,6 @@ class OpenmxParser(FairdiParser):
                         u_ele = scf_step.get('u_ele')
                         if u_ele is not None:
                             scf.energy_sum_eigenvalues_scf_iteration = u_ele * units.hartree
+                u_tot = md_step.get('Utot')
+                if u_tot is not None:
+                    scc.energy_total = u_tot * units.hartree
