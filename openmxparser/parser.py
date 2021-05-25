@@ -27,6 +27,7 @@ from nomad.datamodel.metainfo.public import section_scf_iteration as SCF
 from nomad.datamodel.metainfo.public import section_system as System
 from nomad.datamodel.metainfo.public import section_single_configuration_calculation as SCC
 from nomad.datamodel.metainfo.public import section_method as Method
+from nomad.datamodel.metainfo.public import section_sampling_method
 from nomad.datamodel.metainfo.public import section_XC_functionals as xc_functionals
 from nomad.parsing.file_parser import UnstructuredTextFileParser, Quantity
 
@@ -73,6 +74,8 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('lattice_vectors_units',
              r'(?i)Atoms.UnitVectors.Unit\s+([a-z]{2,3})', repeats=False),
     Quantity('scf_hubbard_u', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
+    Quantity('md_type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
+    Quantity('md_opt_criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
 ])
 
 mdfile_parser = UnstructuredTextFileParser(quantities=[
@@ -139,6 +142,38 @@ class OpenmxParser(FairdiParser):
             method.number_of_spin_channels = 2
         else:
             method.number_of_spin_channels = 1
+
+        md_type = mainfile_parser.get('md_type')
+        md_types_list = [
+            # FIXME: handle the various OptCx methods with constraints
+            ['OPT', 'geometry_optimization', 'steepest_descent'],
+            ['DIIS', 'geometry_optimization', 'diis'],
+            ['BFGS', 'geometry_optimization', 'bfgs'],
+            # FIXME: not in https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-meta-info/-/wikis/metainfo/geometry-optimization-method
+            ['RF', 'geometry_optimization', 'rf'],
+            # FIXME: not in https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-meta-info/-/wikis/metainfo/geometry-optimization-method
+            ['EF', 'geometry_optimization', 'ef'],
+            ['NVE', 'molecular_dynamics', 'NVE'],
+            ['NVT_VS', 'molecular_dynamics', 'NVT'],
+            ['NVT_NH', 'molecular_dynamics', 'NVT'],
+        ]
+        if md_type is not None and 'nomd' not in md_type.lower():
+            md_type = md_type.upper()
+            sampling_method = run.m_create(section_sampling_method)
+            for current_md_type in md_types_list:
+                if current_md_type[0] in md_type:
+                    sampling_method.sampling_method = current_md_type[1]
+                    if current_md_type[1] == 'geometry_optimization':
+                        sampling_method.geometry_optimization_method = current_md_type[2]
+                        criterion = mainfile_parser.get('md_opt_criterion')
+                        if criterion is not None:
+                            sampling_method.geometry_optimization_threshold_force = (
+                                criterion * units.hartree / units.bohr)
+                        else:
+                            sampling_method.geometry_optimization_threshold_force = (
+                                1e-4 * units.hartree / units.bohr)
+                    else:
+                        sampling_method.ensemble_type = current_md_type[2]
 
         mainfile_md_steps = mainfile_parser.get('md_step')
         if mainfile_md_steps is not None:

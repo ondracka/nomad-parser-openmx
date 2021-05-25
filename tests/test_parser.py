@@ -55,6 +55,7 @@ def test_HfO2(parser):
     scf = scc[0].section_scf_iteration
     assert len(scf) == 24
     scf[3].energy_total_scf_iteration == pytest.approx(-3.916702417016777e-16)
+
     method = run.section_method[0]
     section_XC_functionals1 = method.section_XC_functionals[0]
     section_XC_functionals2 = method.section_XC_functionals[1]
@@ -62,6 +63,8 @@ def test_HfO2(parser):
     assert method.electronic_structure_method == 'DFT'
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+
+    assert run.section_sampling_method == []
 
     system = run.section_system[0]
     assert all([a == b for a, b in zip(system.configuration_periodic_dimensions,
@@ -93,6 +96,7 @@ def test_AlN(parser):
     scf = scc[3].section_scf_iteration
     assert len(scf) == 6
     scf[5].energy_total_scf_iteration == pytest.approx(-3.4038520917173614e-17)
+
     method = run.section_method[0]
     section_XC_functionals1 = method.section_XC_functionals[0]
     section_XC_functionals2 = method.section_XC_functionals[1]
@@ -100,6 +104,13 @@ def test_AlN(parser):
     assert method.electronic_structure_method == 'DFT'
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+
+    sampling_method = run.section_sampling_method
+    assert len(sampling_method) == 1
+    assert sampling_method[0].geometry_optimization_method == "steepest_descent"
+    assert sampling_method[0].sampling_method == "geometry_optimization"
+    assert sampling_method[0].geometry_optimization_threshold_force.magnitude == approx(
+        (0.0003 * units.hartree / units.bohr).to_base_units().magnitude)
 
     assert len(run.section_system) == 5
     system = run.section_system[0]
