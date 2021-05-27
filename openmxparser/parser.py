@@ -88,6 +88,10 @@ mdfile_parser = UnstructuredTextFileParser(quantities=[
                 r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)',
                 repeats=False),
             Quantity(
+                'temperature',
+                r'Temperature=\s+(\d+\.\d+)',
+                repeats=False),
+            Quantity(
                 'atoms', r'\s+([A-Za-z]{1,2}(?:\s+-?\d+\.\d+)+)',
                 repeats=True)
         ]),
@@ -264,3 +268,6 @@ class OpenmxParser(FairdiParser):
                 u_tot = md_step.get('Utot')
                 if u_tot is not None:
                     scc.energy_total = u_tot * units.hartree
+                temperature = mdfile_md_steps[i].get('temperature')
+                if temperature is not None:
+                    scc.temperature = temperature * units.kelvin
