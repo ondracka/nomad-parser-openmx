@@ -146,3 +146,24 @@ def test_AlN(parser):
     assert system.atom_positions[3][2].magnitude == approx(A_to_m(4.39015))
     assert len(system.atom_labels) == 4
     assert system.atom_labels[1] == 'Al'
+
+
+def test_C2N2(parser):
+    '''
+    Molecular dynamics using the Nose-Hover thermostat for simple N2H2 molecule
+    '''
+    archive = EntryArchive()
+    parser.parse('tests/C2H2_molecular_dynamics/C2H2.out', archive, logging)
+
+    run = archive.section_run[0]
+    assert run.program_version == '3.9.2'
+    assert run.program_basis_set_type == 'Numeric AOs'
+    scc = run.section_single_configuration_calculation
+    assert len(scc) == 100
+
+    assert len(run.section_system) == 100
+
+    sampling_method = run.section_sampling_method
+    assert len(sampling_method) == 1
+    assert sampling_method[0].sampling_method == "molecular_dynamics"
+    assert sampling_method[0].ensemble_type == "NVT"
