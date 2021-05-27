@@ -160,6 +160,8 @@ def test_C2N2(parser):
     assert run.program_basis_set_type == 'Numeric AOs'
     scc = run.section_single_configuration_calculation
     assert len(scc) == 100
+    assert scc[0].temperature.magnitude == approx(300.0)
+    assert scc[99].temperature.magnitude == approx(46.053)
 
     assert len(run.section_system) == 100
 

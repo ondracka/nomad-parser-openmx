@@ -88,6 +88,10 @@ mdfile_parser = UnstructuredTextFileParser(quantities=[
                 r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)',
                 repeats=False),
             Quantity(
+                'temperature',
+                r'Temperature=\s+(\d+\.\d+)',
+                repeats=False),
+            Quantity(
                 'atoms', r'\s+([A-Za-z]{1,2}(?:\s+-?\d+\.\d+)+)',
                 repeats=True)
         ]),
@@ -130,14 +134,17 @@ class OpenmxParser(FairdiParser):
             if mainfile_parser.get('scf_hubbard_u').lower == 'on':
                 method.electronic_structure_method = 'DFT+U'
 
-        section_XC_functionals1 = method.m_create(xc_functionals)
-        section_XC_functionals2 = method.m_create(xc_functionals)
-
+        xc_functional_dictionary = {
+            'GGA-PBE': ['GGA_C_PBE', 'GGA_X_PBE'],
+            'LDA': ['LDA_X', 'LDA_C_PZ'],
+            'LSDA-CA': ['LDA_X', 'LDA_C_PZ'],
+            'LSDA-PW': ['LDA_X', 'LDA_C_PW'],
+            None: ['LDA_X', 'LDA_C_PZ']
+        }
         scf_XcType = mainfile_parser.get('scf_XcType')
-        if scf_XcType is not None:
-            if mainfile_parser.get('scf_XcType').upper() == 'GGA-PBE':
-                section_XC_functionals1.XC_functional_name = 'GGA_C_PBE'
-                section_XC_functionals2.XC_functional_name = 'GGA_X_PBE'
+        for xc in xc_functional_dictionary[scf_XcType]:
+            method.m_create(xc_functionals).XC_functional_name = xc
+        scf_XcType = mainfile_parser.get('scf_XcType')
 
         scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
         if scf_SpinPolarizationType.lower() == 'on':
@@ -264,3 +271,6 @@ class OpenmxParser(FairdiParser):
                 u_tot = md_step.get('Utot')
                 if u_tot is not None:
                     scc.energy_total = u_tot * units.hartree
+                temperature = mdfile_md_steps[i].get('temperature')
+                if temperature is not None:
+                    scc.temperature = temperature * units.kelvin
