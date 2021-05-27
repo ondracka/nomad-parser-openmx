@@ -75,6 +75,7 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('lattice_vectors_units',
              r'(?i)Atoms.UnitVectors.Unit\s+([a-z]{2,3})', repeats=False),
     Quantity('scf_hubbard_u', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
+<<<<<<< HEAD
     Quantity('md_type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
     Quantity('md_opt_criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
 ])
@@ -88,10 +89,17 @@ mdfile_parser = UnstructuredTextFileParser(quantities=[
                 r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)',
                 repeats=False),
             Quantity(
+                'temperature',
+                r'Temperature=\s+(\d+\.\d+)',
+                repeats=False),
+            Quantity(
                 'atoms', r'\s+([A-Za-z]{1,2}(?:\s+-?\d+\.\d+)+)',
                 repeats=True)
         ]),
         repeats=True),
+=======
+    Quantity('scf_ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False)
+>>>>>>> f1b07ff (smearing method features)
 ])
 
 
@@ -153,6 +161,7 @@ class OpenmxParser(FairdiParser):
         else:
             method.number_of_spin_channels = 1
 
+<<<<<<< HEAD
         md_type = mainfile_parser.get('md_type')
         md_types_list = [
             # FIXME: handle the various OptCx methods with constraints
@@ -259,6 +268,18 @@ class OpenmxParser(FairdiParser):
                 if i == n_md_steps - 1:
                     logger.warning("Not implemented")
 
+=======
+        method.smearing_kind = 'fermi'
+        scf_ElectronicTemperature = mainfile_parser.get('scf.ElectronicTemperature')
+        if scf_ElectronicTemperature is not None:
+            method.smearing_width = scf_ElectronicTemperature
+        else:
+            method.smearing_width = 4.14194634200767E-21
+
+        md_steps = mainfile_parser.get('md_step')
+        if md_steps is not None:
+            for md_step in md_steps:
+>>>>>>> f1b07ff (smearing method features)
                 scc = run.m_create(SCC)
                 scc.single_configuration_calculation_to_system_ref = system
                 scc.single_configuration_to_calculation_method_ref = method
@@ -272,3 +293,6 @@ class OpenmxParser(FairdiParser):
                 u_tot = md_step.get('Utot')
                 if u_tot is not None:
                     scc.energy_total = u_tot * units.hartree
+                temperature = mdfile_md_steps[i].get('temperature')
+                if temperature is not None:
+                    scc.temperature = temperature * units.kelvin

@@ -65,8 +65,10 @@ def test_HfO2(parser):
     section_XC_functionals2 = method.section_XC_functionals[1]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert method.smearing_kind == 'fermi'
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+    assert method.smearing_width == 4.14194634200767E-21
 
     assert run.section_sampling_method == []
 
@@ -107,8 +109,10 @@ def test_AlN(parser):
     section_XC_functionals2 = method.section_XC_functionals[1]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert method.smearing_kind == 'fermi'
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+<<<<<<< HEAD
 
     sampling_method = run.section_sampling_method
     assert len(sampling_method) == 1
@@ -158,6 +162,8 @@ def test_C2N2(parser):
     assert run.program_basis_set_type == 'Numeric AOs'
     scc = run.section_single_configuration_calculation
     assert len(scc) == 100
+    assert scc[0].temperature.magnitude == approx(300.0)
+    assert scc[99].temperature.magnitude == approx(46.053)
 
     assert len(run.section_system) == 100
 
@@ -165,3 +171,6 @@ def test_C2N2(parser):
     assert len(sampling_method) == 1
     assert sampling_method[0].sampling_method == "molecular_dynamics"
     assert sampling_method[0].ensemble_type == "NVT"
+=======
+    assert method.smearing_width == 4.14194634200767E-21
+>>>>>>> f1b07ff (smearing method features)
