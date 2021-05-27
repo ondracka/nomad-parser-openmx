@@ -49,7 +49,7 @@ def test_HfO2(parser):
     Simple single point calculation monoclinic HfO2 test case.
     '''
     archive = EntryArchive()
-    parser.parse('tests/data/HfO2_single_point/m-HfO2.out', archive, logging)
+    parser.parse('tests/HfO2_single_point/m-HfO2.out', archive, logging)
 
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
@@ -88,7 +88,7 @@ def test_AlN(parser):
     Geometry optimization (atomic positions only) AlN test case.
     '''
     archive = EntryArchive()
-    parser.parse('tests/data/AlN_ionic_optimization/AlN.out', archive, logging)
+    parser.parse('tests/AlN_ionic_optimization/AlN.out', archive, logging)
 
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
