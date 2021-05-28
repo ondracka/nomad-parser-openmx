@@ -17,6 +17,7 @@
 #
 
 import numpy as np
+import re
 from os import path
 
 from nomad.datamodel import EntryArchive
@@ -79,24 +80,36 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('md_opt_criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
 ])
 
-mdfile_parser = UnstructuredTextFileParser(quantities=[
-    Quantity(
-        'md_step', r'(\d+\s+time.+\s+(?:[A-Za-z]{1,2}\s+(?:-?\d+\.\d+\s+)+)+)',
-        sub_parser=UnstructuredTextFileParser(quantities=[
-            Quantity(
-                'cell_vectors',
-                r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)',
-                repeats=False),
-            Quantity(
-                'temperature',
-                r'Temperature=\s+(\d+\.\d+)',
-                repeats=False),
-            Quantity(
-                'atoms', r'\s+([A-Za-z]{1,2}(?:\s+-?\d+\.\d+)+)',
-                repeats=True)
-        ]),
-        repeats=True),
-])
+
+def parse_md_file(md_file):
+    result = []
+    with open(md_file, 'r') as f:
+        cell_vectors_re = re.compile(r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)')
+        temperature_re = re.compile(r'Temperature=\s+(\d+\.\d+)')
+        for line in f:
+            line_list = line.split()
+            if len(line_list) == 1:
+                step_header = True
+                natoms = int(line_list[0])
+                result.append({'species': [], 'positions': np.empty((natoms, 3))})
+                atomindex = 0
+            elif step_header:
+                cell_vectors = cell_vectors_re.search(line)
+                if cell_vectors is not None:
+                    cell_vectors = [float(v) for v in cell_vectors.group(1).split()]
+                    result[-1]['cell_vectors'] = np.array(cell_vectors).reshape(3, 3)
+                temperature = temperature_re.search(line)
+                if temperature is not None:
+                    temperature = temperature.group(1)
+                    result[-1]['temperature'] = temperature
+                step_header = False
+            else:
+                result[-1]['positions'][atomindex][0:3] = [
+                    float(val) for val in line_list[1:4]]
+                result[-1]['species'].append(line_list[0])
+                atomindex += 1
+    f.close()
+    return result
 
 
 class OpenmxParser(FairdiParser):
@@ -117,8 +130,9 @@ class OpenmxParser(FairdiParser):
         # Get system from the MD file
         md_file = path.splitext(mainfile)[0] + '.md'
         if path.isfile(md_file):
-            mdfile_parser.mainfile = md_file
-            mdfile_parser.parse()
+            mdfile_md_steps = parse_md_file(md_file)
+        else:
+            mdfile_md_steps = None
 
         # Some basic values
         run = archive.m_create(Run)
@@ -187,7 +201,6 @@ class OpenmxParser(FairdiParser):
         mainfile_md_steps = mainfile_parser.get('md_step')
         if mainfile_md_steps is not None:
             n_md_steps = len(mainfile_md_steps)
-        mdfile_md_steps = mdfile_parser.get('md_step')
         if mdfile_md_steps is not None:
             n_mdfile_md_steps = len(mdfile_md_steps)
         # Do some consistency checks between the out and md file.
@@ -209,12 +222,11 @@ class OpenmxParser(FairdiParser):
                 system = run.m_create(System)
                 if not ignore_md_file:
                     cell = mdfile_md_steps[i].get('cell_vectors')
-                    system.lattice_vectors = np.array(cell).reshape(3, 3) * units.angstrom
+                    system.lattice_vectors = cell * units.angstrom
                     system.configuration_periodic_dimensions = [True, True, True]
-                    atoms = mdfile_md_steps[i].get('atoms')
-                    if atoms is not None:
-                        system.atom_positions = np.array([a[1:4] for a in atoms]) * units.angstrom
-                        system.atom_labels = [a[0] for a in atoms]
+                    positions = mdfile_md_steps[i].get('positions')
+                    system.atom_positions = positions * units.angstrom
+                    system.atom_labels = mdfile_md_steps[i].get('species')
                 if i == 0:
                     # Get the initial and final position from out file, it has better precision
                     # and we also have some fallback if the md file is missing.
