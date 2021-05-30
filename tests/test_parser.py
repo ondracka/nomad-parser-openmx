@@ -165,6 +165,12 @@ def test_C2N2(parser):
 
     assert len(run.section_system) == 100
 
+    method = run.section_method[0]
+    assert method.number_of_spin_channels == 1
+    assert method.electronic_structure_method == 'DFT'
+    assert method.section_XC_functionals[0].XC_functional_name == 'LDA_X'
+    assert method.section_XC_functionals[1].XC_functional_name == 'LDA_C_PZ'
+
     sampling_method = run.section_sampling_method
     assert len(sampling_method) == 1
     assert sampling_method[0].sampling_method == "molecular_dynamics"
