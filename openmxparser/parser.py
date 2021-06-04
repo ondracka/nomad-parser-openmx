@@ -126,6 +126,7 @@ class OpenmxParser(FairdiParser):
         # Use the previously defined parsers on the given mainfile
         mainfile_parser.mainfile = mainfile
         mainfile_parser.parse()
+        del mainfile_parser._file_handler
 
         # Get system from the MD file
         md_file = path.splitext(mainfile)[0] + '.md'
