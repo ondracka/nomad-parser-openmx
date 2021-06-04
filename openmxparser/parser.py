@@ -202,6 +202,7 @@ class OpenmxParser(FairdiParser):
         mainfile_md_steps = mainfile_parser.get('md_step')
         if mainfile_md_steps is not None:
             n_md_steps = len(mainfile_md_steps)
+        n_mdfile_md_steps = 0
         if mdfile_md_steps is not None:
             n_mdfile_md_steps = len(mdfile_md_steps)
         # Do some consistency checks between the out and md file.
@@ -228,7 +229,7 @@ class OpenmxParser(FairdiParser):
                     positions = mdfile_md_steps[i].get('positions')
                     system.atom_positions = positions * units.angstrom
                     system.atom_labels = mdfile_md_steps[i].get('species')
-                if i == 0:
+                elif i == 0:
                     # Get the initial and final position from out file, it has better precision
                     # and we also have some fallback if the md file is missing.
                     atoms_units = mainfile_parser.get('atoms_coordinates_units')
@@ -268,9 +269,6 @@ class OpenmxParser(FairdiParser):
                     else:
                         logger.warning('Failed to parse the input structure.')
 
-                if i == n_md_steps - 1:
-                    logger.warning("Not implemented")
-
                 scc = run.m_create(SCC)
                 scc.single_configuration_calculation_to_system_ref = system
                 scc.single_configuration_to_calculation_method_ref = method
@@ -284,6 +282,7 @@ class OpenmxParser(FairdiParser):
                 u_tot = md_step.get('Utot')
                 if u_tot is not None:
                     scc.energy_total = u_tot * units.hartree
-                temperature = mdfile_md_steps[i].get('temperature')
-                if temperature is not None:
-                    scc.temperature = temperature * units.kelvin
+                if not ignore_md_file:
+                    temperature = mdfile_md_steps[i].get('temperature')
+                    if temperature is not None:
+                        scc.temperature = temperature * units.kelvin

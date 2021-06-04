@@ -123,10 +123,10 @@ def test_AlN(parser):
     system = run.section_system[0]
     assert all([a == b for a, b in zip(system.configuration_periodic_dimensions,
                                        [True, True, True])])
-    assert system.lattice_vectors[0][0].magnitude == approx(A_to_m(3.109970))
-    assert system.lattice_vectors[1][0].magnitude == approx(A_to_m(-1.5549850))
+    assert system.lattice_vectors[0][0].magnitude == approx(A_to_m(3.10997))
+    assert system.lattice_vectors[1][0].magnitude == approx(A_to_m(-1.55499))
     assert len(system.atom_positions) == 4
-    assert system.atom_positions[0][0].magnitude == approx(A_to_m(1.55498655))
+    assert system.atom_positions[0][0].magnitude == approx(A_to_m(1.55499))
     assert system.atom_positions[3][2].magnitude == approx(A_to_m(4.39210))
     assert len(system.atom_labels) == 4
     assert system.atom_labels[3] == 'N'
