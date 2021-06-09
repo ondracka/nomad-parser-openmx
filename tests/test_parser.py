@@ -38,6 +38,10 @@ def Ha_to_J(value):
     return (value * units.hartree).to_base_units().magnitude
 
 
+def K_to_J(value):
+    return (value * units.joules).to_base_units().magnitude
+
+
 # default pytest.approx settings are abs=1e-12, rel=1e-6 so it doesn't work for small numbers
 # use the default just for comparison with zero
 def approx(value):
@@ -66,6 +70,7 @@ def test_HfO2(parser):
     section_XC_functionals2 = method.section_XC_functionals[1]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert method.smearing_width == approx(K_to_J(300))
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
 
@@ -109,6 +114,7 @@ def test_AlN(parser):
     section_XC_functionals2 = method.section_XC_functionals[1]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert method.smearing_width == approx(K_to_J(300))
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
 
@@ -168,6 +174,7 @@ def test_C2N2(parser):
     method = run.section_method[0]
     assert method.number_of_spin_channels == 1
     assert method.electronic_structure_method == 'DFT'
+    assert method.smearing_width == approx(K_to_J(500))
     assert method.section_XC_functionals[0].XC_functional_name == 'LDA_X'
     assert method.section_XC_functionals[1].XC_functional_name == 'LDA_C_PZ'
 
