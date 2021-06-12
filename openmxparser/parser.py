@@ -78,6 +78,7 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('scf_hubbard_u', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
     Quantity('md_type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
     Quantity('md_opt_criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
+    Quantity('scf_ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False),
 ])
 
 
@@ -166,6 +167,13 @@ class OpenmxParser(FairdiParser):
             method.number_of_spin_channels = 2
         else:
             method.number_of_spin_channels = 1
+
+        method.smearing_kind = 'fermi'
+        scf_ElectronicTemperature = mainfile_parser.get('scf_ElectronicTemperature')
+        if scf_ElectronicTemperature is not None:
+            method.smearing_width = (scf_ElectronicTemperature * units.kelvin * units.k).to_base_units().magnitude
+        else:
+            method.smearing_width = (300 * units.kelvin * units.k).to_base_units().magnitude
 
         md_type = mainfile_parser.get('md_type')
         md_types_list = [
