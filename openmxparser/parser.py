@@ -171,9 +171,9 @@ class OpenmxParser(FairdiParser):
         method.smearing_kind = 'fermi'
         scf_ElectronicTemperature = mainfile_parser.get('scf_ElectronicTemperature')
         if scf_ElectronicTemperature is not None:
-            method.smearing_width = (scf_ElectronicTemperature * units.kelvin).to_base_units().magnitude
+            method.smearing_width = (scf_ElectronicTemperature * units.kelvin * units.k).to_base_units().magnitude
         else:
-            method.smearing_width = (300 * units.kelvin).to_base_units().magnitude
+            method.smearing_width = (300 * units.kelvin * units.k).to_base_units().magnitude
 
         md_type = mainfile_parser.get('md_type')
         md_types_list = [
