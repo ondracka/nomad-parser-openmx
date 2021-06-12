@@ -39,7 +39,7 @@ def Ha_to_J(value):
 
 
 def K_to_J(value):
-    return (value * units.joules).to_base_units().magnitude
+    return (value * units.joule * units.k).to_base_units().magnitude
 
 
 # default pytest.approx settings are abs=1e-12, rel=1e-6 so it doesn't work for small numbers
