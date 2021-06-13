@@ -79,6 +79,7 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('md_type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
     Quantity('md_opt_criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
     Quantity('scf_ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False),
+    Quantity('Timing_exist', r'Computational Time \(second\)([\s\S]+)Others.+', repeats=False),
 ])
 
 
@@ -174,6 +175,12 @@ class OpenmxParser(FairdiParser):
             method.smearing_width = (scf_ElectronicTemperature * units.kelvin * units.k).to_base_units().magnitude
         else:
             method.smearing_width = (300 * units.kelvin * units.k).to_base_units().magnitude
+
+        Timing_exist = mainfile_parser.get('Timing_exist')
+        if Timing_exist is not None:
+            run.run_clean_end = True
+        else:
+            run.run_clean_end = False
 
         md_type = mainfile_parser.get('md_type')
         md_types_list = [
