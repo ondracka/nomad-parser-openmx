@@ -58,6 +58,7 @@ def test_HfO2(parser):
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
     assert run.program_basis_set_type == 'Numeric AOs'
+    assert run.run_clean_end
     scc = run.section_single_configuration_calculation
     assert len(scc) == 1
     assert scc[0].energy_total.magnitude == approx(Ha_to_J(-346.328738171942))
@@ -98,6 +99,7 @@ def test_AlN(parser):
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
     assert run.program_basis_set_type == 'Numeric AOs'
+    assert run.run_clean_end
     scc = run.section_single_configuration_calculation
     assert len(scc) == 5
     assert scc[0].energy_total.magnitude == approx(Ha_to_J(-25.194346653540))
@@ -164,6 +166,7 @@ def test_C2N2(parser):
     run = archive.section_run[0]
     assert run.program_version == '3.9.2'
     assert run.program_basis_set_type == 'Numeric AOs'
+    assert run.run_clean_end
     scc = run.section_single_configuration_calculation
     assert len(scc) == 100
     assert scc[0].temperature.magnitude == approx(300.0)
