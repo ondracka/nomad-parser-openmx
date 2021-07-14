@@ -42,16 +42,16 @@ A = (1 * units.angstrom).to_base_units().magnitude
 
 scf_step_parser = UnstructuredTextFileParser(quantities=[
     Quantity('scf_step_number', r'   SCF=\s*(\d+)', repeats=False),
-    Quantity('norm_rd', r'NormRD=\s*([\d\.]+)', repeats=False),
-    Quantity('u_ele', r'Uele=\s*([-\d\.]+)', repeats=False)
+    Quantity('NormRD', r'NormRD=\s*([\d\.]+)', repeats=False),
+    Quantity('Uele', r'Uele=\s*([-\d\.]+)', repeats=False)
 ])
 
 md_step_parser = UnstructuredTextFileParser(quantities=[
-    Quantity('scf_step', r'   (SCF=.+?Uele=\s*[-\d\.]+)', sub_parser=scf_step_parser, repeats=True),
+    Quantity('SCF', r'   (SCF=.+?Uele=\s*[-\d\.]+)', sub_parser=scf_step_parser, repeats=True),
     Quantity('Utot', r'Utot\.\s+(-?\d+\.\d+)', repeats=False)
 ])
 
-input_atoms_parser = UnstructuredTextFileParser(quantities=[
+species_and_coordinates_parser = UnstructuredTextFileParser(quantities=[
     Quantity('atom', r'\s*\d+\s*([A-Za-z]{1,2})\s*([-\d\.]+)\s+([-\d\.]+)\s+([-\d\.]+)\s+[\d\.]+\s*[\d\.]+\s*',
              repeats=True)
 ])
@@ -63,23 +63,23 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
         sub_parser=md_step_parser,
         repeats=True),
     Quantity(
-        'input_atoms', r'<Atoms.SpeciesAndCoordinates([\s\S]+)Atoms.SpeciesAndCoordinates>',
-        sub_parser=input_atoms_parser,
+        'atoms', r'<Atoms.SpeciesAndCoordinates([\s\S]+)Atoms.SpeciesAndCoordinates>',
+        sub_parser=species_and_coordinates_parser,
         repeats=False),
     Quantity(
         'input_lattice_vectors', r'(?i)<Atoms.UnitVectors\s+((?:-?\d+\.\d+\s+)+)Atoms.UnitVectors>',
         repeats=False),
-    Quantity('scf_XcType', r'scf.XcType\s+(\S+)', repeats=False),
-    Quantity('scf_SpinPolarization', r'scf.SpinPolarization\s+(\S+)', repeats=False),
-    Quantity('atoms_coordinates_units',
+    Quantity('scf.XcType', r'scf.XcType\s+(\S+)', repeats=False),
+    Quantity('scf.SpinPolarization', r'scf.SpinPolarization\s+(\S+)', repeats=False),
+    Quantity('Atoms.SpeciesAndCoordinates.Unit',
              r'(?i)Atoms.SpeciesAndCoordinates.Unit\s+([a-z]{2,4})', repeats=False),
-    Quantity('lattice_vectors_units',
+    Quantity('Atoms.UnitVectors.Unit',
              r'(?i)Atoms.UnitVectors.Unit\s+([a-z]{2,3})', repeats=False),
-    Quantity('scf_hubbard_u', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
-    Quantity('md_type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
-    Quantity('md_opt_criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
-    Quantity('scf_ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False),
-    Quantity('Timing_exist', r'Computational Time \(second\)([\s\S]+)Others.+', repeats=False),
+    Quantity('scf.Hubbard.U', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
+    Quantity('MD.Type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
+    Quantity('MD.Opt.criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
+    Quantity('scf.ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False),
+    Quantity('have_timing', r'Computational Time \(second\)([\s\S]+)Others.+', repeats=False),
 ])
 
 
@@ -146,9 +146,9 @@ class OpenmxParser(FairdiParser):
         method = run.m_create(Method)
         method.electronic_structure_method = 'DFT'
         # FIXME: add some testcase for DFT+U
-        scf_hubbard_u = mainfile_parser.get('scf_hubbard_u')
+        scf_hubbard_u = mainfile_parser.get('scf.Hubbard.U')
         if scf_hubbard_u is not None:
-            if mainfile_parser.get('scf_hubbard_u').lower == 'on':
+            if scf_hubbard_u.lower == 'on':
                 method.electronic_structure_method = 'DFT+U'
 
         xc_functional_dictionary = {
@@ -158,31 +158,30 @@ class OpenmxParser(FairdiParser):
             'LSDA-PW': ['LDA_X', 'LDA_C_PW'],
             None: ['LDA_X', 'LDA_C_PZ']
         }
-        scf_XcType = mainfile_parser.get('scf_XcType')
-        for xc in xc_functional_dictionary[scf_XcType]:
+        scf_xctype = mainfile_parser.get('scf.XcType')
+        for xc in xc_functional_dictionary[scf_xctype]:
             method.m_create(xc_functionals).XC_functional_name = xc
-        scf_XcType = mainfile_parser.get('scf_XcType')
 
-        scf_SpinPolarizationType = mainfile_parser.get('scf_SpinPolarization')
-        if scf_SpinPolarizationType.lower() == 'on':
+        spinpol = mainfile_parser.get('scf.SpinPolarization')
+        if spinpol.lower() == 'on':
             method.number_of_spin_channels = 2
         else:
             method.number_of_spin_channels = 1
 
         method.smearing_kind = 'fermi'
-        scf_ElectronicTemperature = mainfile_parser.get('scf_ElectronicTemperature')
+        scf_ElectronicTemperature = mainfile_parser.get('scf.ElectronicTemperature')
         if scf_ElectronicTemperature is not None:
             method.smearing_width = (scf_ElectronicTemperature * units.kelvin * units.k).to_base_units().magnitude
         else:
             method.smearing_width = (300 * units.kelvin * units.k).to_base_units().magnitude
 
-        Timing_exist = mainfile_parser.get('Timing_exist')
-        if Timing_exist is not None:
+        have_timing = mainfile_parser.get('have_timing')
+        if have_timing is not None:
             run.run_clean_end = True
         else:
             run.run_clean_end = False
 
-        md_type = mainfile_parser.get('md_type')
+        md_type = mainfile_parser.get('MD.Type')
         md_types_list = [
             # FIXME: handle the various OptCx methods with constraints
             ['OPT', 'geometry_optimization', 'steepest_descent'],
@@ -204,7 +203,7 @@ class OpenmxParser(FairdiParser):
                     sampling_method.sampling_method = current_md_type[1]
                     if current_md_type[1] == 'geometry_optimization':
                         sampling_method.geometry_optimization_method = current_md_type[2]
-                        criterion = mainfile_parser.get('md_opt_criterion')
+                        criterion = mainfile_parser.get('MD.Opt.criterion')
                         if criterion is not None:
                             sampling_method.geometry_optimization_threshold_force = (
                                 criterion * units.hartree / units.bohr)
@@ -247,10 +246,10 @@ class OpenmxParser(FairdiParser):
                 elif i == 0:
                     # Get the initial and final position from out file, it has better precision
                     # and we also have some fallback if the md file is missing.
-                    atoms_units = mainfile_parser.get('atoms_coordinates_units')
+                    atoms_units = mainfile_parser.get('Atoms.SpeciesAndCoordinates.Unit')
                     lattice_vectors = mainfile_parser.get('input_lattice_vectors')
-                    lattice_units = mainfile_parser.get('lattice_vectors_units')
-                    atoms = mainfile_parser.get('input_atoms').get('atom')
+                    lattice_units = mainfile_parser.get('Atoms.UnitVectors.Unit')
+                    atoms = mainfile_parser.get('atoms').get('atom')
 
                     if atoms is not None and lattice_vectors is not None:
                         lattice_vectors = np.array(lattice_vectors).reshape(3, 3)
@@ -287,11 +286,11 @@ class OpenmxParser(FairdiParser):
                 scc = run.m_create(SCC)
                 scc.single_configuration_calculation_to_system_ref = system
                 scc.single_configuration_to_calculation_method_ref = method
-                scf_steps = md_step.get('scf_step')
+                scf_steps = md_step.get('SCF')
                 if scf_steps is not None:
                     for scf_step in scf_steps:
                         scf = scc.m_create(SCF)
-                        u_ele = scf_step.get('u_ele')
+                        u_ele = scf_step.get('Uele')
                         if u_ele is not None:
                             scf.energy_sum_eigenvalues_scf_iteration = u_ele * units.hartree
                 u_tot = md_step.get('Utot')
