@@ -18,6 +18,7 @@
 
 import pytest
 import logging
+import numpy as np
 
 from nomad.datamodel import EntryArchive
 from nomad.units import ureg as units
@@ -138,6 +139,10 @@ def test_AlN(parser):
     assert system.atom_positions[3][2].magnitude == approx(A_to_m(4.39210))
     assert len(system.atom_labels) == 4
     assert system.atom_labels[3] == 'N'
+    system = run.section_system[0]
+    assert np.shape(system.velocities) == (4, 3)
+    assert system.velocities[0][0].magnitude == pytest.approx(0.0)
+    assert system.velocities[3][2].magnitude == pytest.approx(0.0)
     system = run.section_system[3]
     assert system.lattice_vectors[1][1].magnitude == approx(A_to_m(2.69331))
     assert system.lattice_vectors[2][2].magnitude == approx(A_to_m(4.98010))
@@ -185,3 +190,11 @@ def test_C2N2(parser):
     assert len(sampling_method) == 1
     assert sampling_method[0].sampling_method == "molecular_dynamics"
     assert sampling_method[0].ensemble_type == "NVT"
+
+    system = run.section_system[0]
+    assert np.shape(system.velocities) == (4, 3)
+    assert system.velocities[0][0].magnitude == approx(396.15464)
+    assert system.velocities[3][2].magnitude == approx(2359.24208)
+    system = run.section_system[99]
+    assert system.velocities[0][1].magnitude == approx(-353.94304)
+    assert system.velocities[3][0].magnitude == approx(-315.74184)

@@ -93,7 +93,9 @@ def parse_md_file(md_file):
             if len(line_list) == 1:
                 step_header = True
                 natoms = int(line_list[0])
-                result.append({'species': [], 'positions': np.empty((natoms, 3))})
+                result.append({'species': [],
+                               'positions': np.empty((natoms, 3)),
+                               'velocities': np.empty((natoms, 3))})
                 atomindex = 0
             elif step_header:
                 cell_vectors = cell_vectors_re.search(line)
@@ -108,6 +110,8 @@ def parse_md_file(md_file):
             else:
                 result[-1]['positions'][atomindex][0:3] = [
                     float(val) for val in line_list[1:4]]
+                result[-1]['velocities'][atomindex][0:3] = [
+                    float(val) for val in line_list[7:10]]
                 result[-1]['species'].append(line_list[0])
                 atomindex += 1
     f.close()
@@ -243,6 +247,7 @@ class OpenmxParser(FairdiParser):
                     positions = mdfile_md_steps[i].get('positions')
                     system.atom_positions = positions * units.angstrom
                     system.atom_labels = mdfile_md_steps[i].get('species')
+                    system.velocities = mdfile_md_steps[i].get('velocities') * units.meter / units.second
                 elif i == 0:
                     # Get the initial and final position from out file, it has better precision
                     # and we also have some fallback if the md file is missing.
