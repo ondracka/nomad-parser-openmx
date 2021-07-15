@@ -249,8 +249,7 @@ class OpenmxParser(FairdiParser):
                     system.atom_labels = mdfile_md_steps[i].get('species')
                     system.velocities = mdfile_md_steps[i].get('velocities') * units.meter / units.second
                 elif i == 0:
-                    # Get the initial and final position from out file, it has better precision
-                    # and we also have some fallback if the md file is missing.
+                    # Get the initial position from out file as a fallback if the md file is missing.
                     atoms_units = mainfile_parser.get('Atoms.SpeciesAndCoordinates.Unit')
                     lattice_vectors = mainfile_parser.get('input_lattice_vectors')
                     lattice_units = mainfile_parser.get('Atoms.UnitVectors.Unit')
@@ -280,7 +279,7 @@ class OpenmxParser(FairdiParser):
                                                           for pos in atom_positions]) * lattice_units
                         else:
                             # default unit is angstrom
-                            atom_positions = atom_positions * units.bohr
+                            atom_positions = atom_positions * units.angstrom
                         system.atom_positions = atom_positions
                         system.lattice_vectors = lattice_vectors
                         system.configuration_periodic_dimensions = [True, True, True]
