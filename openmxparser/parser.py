@@ -185,7 +185,7 @@ class OpenmxParser(FairdiParser):
         # FIXME: add some testcase for DFT+U
         scf_hubbard_u = mainfile_parser.get('scf.Hubbard.U')
         if scf_hubbard_u is not None:
-            if scf_hubbard_u.lower == 'on':
+            if scf_hubbard_u.lower() == 'on':
                 method.electronic_structure_method = 'DFT+U'
 
         xc_functional_dictionary = {
