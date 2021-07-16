@@ -160,6 +160,16 @@ def test_AlN(parser):
     assert len(system.atom_labels) == 4
     assert system.atom_labels[1] == 'Al'
 
+    eigenvalues = run.section_single_configuration_calculation[-1].section_eigenvalues[0]
+    assert eigenvalues.eigenvalues_kind == 'normal'
+    assert np.shape(eigenvalues.eigenvalues_kpoints) == (74, 3)
+    assert eigenvalues.eigenvalues_kpoints[0][0] == approx(-0.42857)
+    assert eigenvalues.eigenvalues_kpoints[0][2] == approx(-0.33333)
+    assert eigenvalues.eigenvalues_kpoints[73][2] == pytest.approx(0.0)
+    assert np.shape(eigenvalues.eigenvalues_values) == (1, 74, 52)
+    assert eigenvalues.eigenvalues_values[0, 0, 0].magnitude == approx(Ha_to_J(-0.77128985545768))
+    assert eigenvalues.eigenvalues_values[0, 73, 51].magnitude == approx(Ha_to_J(4.86822333092339))
+
 
 def test_C2N2(parser):
     '''
@@ -198,3 +208,12 @@ def test_C2N2(parser):
     system = run.section_system[99]
     assert system.velocities[0][1].magnitude == approx(-353.94304)
     assert system.velocities[3][0].magnitude == approx(-315.74184)
+
+    eigenvalues = run.section_single_configuration_calculation[-1].section_eigenvalues[0]
+    assert eigenvalues.eigenvalues_kind == 'normal'
+    assert np.shape(eigenvalues.eigenvalues_kpoints) == (1, 3)
+    assert all([a == pytest.approx(b) for a, b in zip(eigenvalues.eigenvalues_kpoints[0],
+                                                      [0, 0, 0])])
+    assert np.shape(eigenvalues.eigenvalues_values) == (1, 1, 64)
+    assert eigenvalues.eigenvalues_values[0, 0, 0].magnitude == approx(Ha_to_J(-0.67352892393426))
+    assert eigenvalues.eigenvalues_values[0, 0, 63].magnitude == approx(Ha_to_J(7.29352095903235))

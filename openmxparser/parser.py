@@ -18,6 +18,7 @@
 
 import numpy as np
 import re
+import io
 from os import path
 
 from nomad.datamodel import EntryArchive
@@ -30,6 +31,7 @@ from nomad.datamodel.metainfo.public import section_single_configuration_calcula
 from nomad.datamodel.metainfo.public import section_method as Method
 from nomad.datamodel.metainfo.public import section_sampling_method
 from nomad.datamodel.metainfo.public import section_XC_functionals as xc_functionals
+from nomad.datamodel.metainfo.public import section_eigenvalues
 from nomad.parsing.file_parser import UnstructuredTextFileParser, Quantity
 
 from .metainfo.openmx import OpenmxSCC  # pylint: disable=unused-import
@@ -52,6 +54,20 @@ md_step_parser = UnstructuredTextFileParser(quantities=[
 
 species_and_coordinates_parser = UnstructuredTextFileParser(quantities=[
     Quantity('atom', r'\s*\d+\s*([A-Za-z]{1,2})\s*([-\d\.]+)\s+([-\d\.]+)\s+([-\d\.]+)\s+[\d\.]+\s*[\d\.]+\s*',
+             repeats=True)
+])
+
+
+def convert_eigenvalues(string):
+    values = np.loadtxt(io.StringIO(string), dtype=np.float64, usecols=(1, 2)).transpose()
+    return values
+
+
+eigenvalues_parser = UnstructuredTextFileParser(quantities=[
+    Quantity('kpoints', r'k1=\s*([-\.\d]+)\s+k2=\s*([-\.\d]+)\s+k3=\s*([-\.\d]+)',
+             repeats=True),
+    Quantity('eigenvalues', r'((?:\d+\s+[-\.\d]+\s+[-\.\d]+\s+)+)',
+             str_operation=convert_eigenvalues,
              repeats=True)
 ])
 
@@ -79,6 +95,10 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('MD.Opt.criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
     Quantity('scf.ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False),
     Quantity('have_timing', r'Computational Time \(second\)([\s\S]+)Others.+', repeats=False),
+    Quantity(
+        'eigenvalues', r'Eigenvalues \(Hartree\) \S+ SCF KS-eq\.\s+\*{59}\s*\*{59}([^*]+)',
+        sub_parser=eigenvalues_parser,
+        repeats=False)
 ])
 
 
@@ -182,8 +202,10 @@ class OpenmxParser(FairdiParser):
         spinpol = mainfile_parser.get('scf.SpinPolarization')
         if spinpol.lower() == 'on':
             method.number_of_spin_channels = 2
+            self.spinpolarized = True
         else:
             method.number_of_spin_channels = 1
+            self.spinpolarized = False
 
         method.smearing_kind = 'fermi'
         scf_ElectronicTemperature = mainfile_parser.get('scf.ElectronicTemperature')
@@ -328,3 +350,5 @@ class OpenmxParser(FairdiParser):
                     temperature = mdfile_md_steps[i].get('temperature')
                     if temperature is not None:
                         scc.temperature = temperature * units.kelvin
+
+        self.parse_eigenvalues()
