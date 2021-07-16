@@ -221,3 +221,30 @@ def test_C2N2(parser):
     assert np.shape(eigenvalues.eigenvalues_values) == (1, 1, 64)
     assert eigenvalues.eigenvalues_values[0, 0, 0].magnitude == approx(Ha_to_J(-0.67352892393426))
     assert eigenvalues.eigenvalues_values[0, 0, 63].magnitude == approx(Ha_to_J(7.29352095903235))
+
+
+def test_CrO2(parser):
+    '''
+    Single run of feromagnetic CrO2 using LDA+U
+    '''
+    archive = EntryArchive()
+    parser.parse('tests/CrO2_single_point/CrO2.out', archive, logging)
+
+    run = archive.section_run[0]
+
+    method = run.section_method[0]
+    assert method.number_of_spin_channels == 2
+    assert method.electronic_structure_method == 'DFT+U'
+    assert method.smearing_width == approx(K_to_J(500))
+    assert method.section_XC_functionals[0].XC_functional_name == 'LDA_X'
+    assert method.section_XC_functionals[1].XC_functional_name == 'LDA_C_PW'
+
+    eigenvalues = run.section_single_configuration_calculation[-1].section_eigenvalues[0]
+    assert eigenvalues.eigenvalues_kind == 'normal'
+    assert eigenvalues.number_of_eigenvalues_kpoints == 100
+    assert np.shape(eigenvalues.eigenvalues_kpoints) == (100, 3)
+    assert eigenvalues.eigenvalues_kpoints[39, 2] == approx(0.43750)
+    assert eigenvalues.number_of_eigenvalues == 90
+    assert np.shape(eigenvalues.eigenvalues_values) == (2, 100, 90)
+    assert eigenvalues.eigenvalues_values[0, 42, 8].magnitude == approx(Ha_to_J(-0.92962144255459))
+    assert eigenvalues.eigenvalues_values[1, 99, 89].magnitude == approx(Ha_to_J(13.66867939417960))
