@@ -126,27 +126,41 @@ class OpenmxParser(FairdiParser):
             mainfile_contents_re=(r'^\*{59}\s+\*{59}\s+This calculation was performed by OpenMX'),
         )
 
-    def parse(self, mainfile: str, archive: EntryArchive, logger):
+    def parse_sampling_method(self):
+        md_type = mainfile_parser.get('MD.Type')
+        md_types_list = [
+            # FIXME: handle the various OptCx methods with constraints
+            ['OPT', 'geometry_optimization', 'steepest_descent'],
+            ['DIIS', 'geometry_optimization', 'diis'],
+            ['BFGS', 'geometry_optimization', 'bfgs'],
+            # FIXME: not in https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-meta-info/-/wikis/metainfo/geometry-optimization-method
+            ['RF', 'geometry_optimization', 'rf'],
+            # FIXME: not in https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-meta-info/-/wikis/metainfo/geometry-optimization-method
+            ['EF', 'geometry_optimization', 'ef'],
+            ['NVE', 'molecular_dynamics', 'NVE'],
+            ['NVT_VS', 'molecular_dynamics', 'NVT'],
+            ['NVT_NH', 'molecular_dynamics', 'NVT'],
+        ]
+        if md_type is not None and 'nomd' not in md_type.lower():
+            md_type = md_type.upper()
+            sampling_method = self.archive.section_run[-1].m_create(section_sampling_method)
+            for current_md_type in md_types_list:
+                if current_md_type[0] in md_type:
+                    sampling_method.sampling_method = current_md_type[1]
+                    if current_md_type[1] == 'geometry_optimization':
+                        sampling_method.geometry_optimization_method = current_md_type[2]
+                        criterion = mainfile_parser.get('MD.Opt.criterion')
+                        if criterion is not None:
+                            sampling_method.geometry_optimization_threshold_force = (
+                                criterion * units.hartree / units.bohr)
+                        else:
+                            sampling_method.geometry_optimization_threshold_force = (
+                                1e-4 * units.hartree / units.bohr)
+                    else:
+                        sampling_method.ensemble_type = current_md_type[2]
 
-        # Use the previously defined parsers on the given mainfile
-        mainfile_parser.mainfile = mainfile
-        mainfile_parser.parse()
-        del mainfile_parser._file_handler
-
-        # Get system from the MD file
-        md_file = path.splitext(mainfile)[0] + '.md'
-        if path.isfile(md_file):
-            mdfile_md_steps = parse_md_file(md_file)
-        else:
-            mdfile_md_steps = None
-
-        # Some basic values
-        run = archive.m_create(Run)
-        run.program_name = 'OpenMX'
-        run.program_version = str(mainfile_parser.get('program_version'))
-        run.program_basis_set_type = "Numeric AOs"
-
-        method = run.m_create(Method)
+    def parse_method(self):
+        method = self.archive.section_run[-1].m_create(Method)
         method.electronic_structure_method = 'DFT'
         # FIXME: add some testcase for DFT+U
         scf_hubbard_u = mainfile_parser.get('scf.Hubbard.U')
@@ -178,43 +192,54 @@ class OpenmxParser(FairdiParser):
         else:
             method.smearing_width = (300 * units.kelvin * units.k).to_base_units().magnitude
 
+    def parse_eigenvalues(self):
+        eigenvalues = self.archive.section_run[-1].section_single_configuration_calculation[-1].m_create(section_eigenvalues)
+        eigenvalues.eigenvalues_kind = 'normal'
+        values = mainfile_parser.get('eigenvalues')
+        if values is not None:
+            kpoints = values.get('kpoints')
+            if kpoints is not None:
+                eigenvalues.eigenvalues_kpoints = kpoints
+            else:
+                eigenvalues.eigenvalues_kpoints = [[0, 0, 0]]
+            values = values.get('eigenvalues')
+            if values is not None:
+                if self.spinpolarized:
+                    eigenvalues.eigenvalues_values = np.stack(values, axis=1) * units.hartree
+                else:
+                    values = [i[0:1] for i in values]
+                    eigenvalues.eigenvalues_values = np.stack(values, axis=1) * units.hartree
+
+    def parse(self, mainfile: str, archive: EntryArchive, logger):
+        self.archive = archive
+
+        # Use the previously defined parsers on the given mainfile
+        mainfile_parser.mainfile = mainfile
+        mainfile_parser.parse()
+        del mainfile_parser._file_handler
+
+        # Get system from the MD file
+        md_file = path.splitext(mainfile)[0] + '.md'
+        if path.isfile(md_file):
+            mdfile_md_steps = parse_md_file(md_file)
+        else:
+            mdfile_md_steps = None
+
+        # Some basic values
+        run = archive.m_create(Run)
+        run.program_name = 'OpenMX'
+        run.program_version = str(mainfile_parser.get('program_version'))
+        run.program_basis_set_type = "Numeric AOs"
+
         have_timing = mainfile_parser.get('have_timing')
         if have_timing is not None:
             run.run_clean_end = True
         else:
             run.run_clean_end = False
 
-        md_type = mainfile_parser.get('MD.Type')
-        md_types_list = [
-            # FIXME: handle the various OptCx methods with constraints
-            ['OPT', 'geometry_optimization', 'steepest_descent'],
-            ['DIIS', 'geometry_optimization', 'diis'],
-            ['BFGS', 'geometry_optimization', 'bfgs'],
-            # FIXME: not in https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-meta-info/-/wikis/metainfo/geometry-optimization-method
-            ['RF', 'geometry_optimization', 'rf'],
-            # FIXME: not in https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-meta-info/-/wikis/metainfo/geometry-optimization-method
-            ['EF', 'geometry_optimization', 'ef'],
-            ['NVE', 'molecular_dynamics', 'NVE'],
-            ['NVT_VS', 'molecular_dynamics', 'NVT'],
-            ['NVT_NH', 'molecular_dynamics', 'NVT'],
-        ]
-        if md_type is not None and 'nomd' not in md_type.lower():
-            md_type = md_type.upper()
-            sampling_method = run.m_create(section_sampling_method)
-            for current_md_type in md_types_list:
-                if current_md_type[0] in md_type:
-                    sampling_method.sampling_method = current_md_type[1]
-                    if current_md_type[1] == 'geometry_optimization':
-                        sampling_method.geometry_optimization_method = current_md_type[2]
-                        criterion = mainfile_parser.get('MD.Opt.criterion')
-                        if criterion is not None:
-                            sampling_method.geometry_optimization_threshold_force = (
-                                criterion * units.hartree / units.bohr)
-                        else:
-                            sampling_method.geometry_optimization_threshold_force = (
-                                1e-4 * units.hartree / units.bohr)
-                    else:
-                        sampling_method.ensemble_type = current_md_type[2]
+        self.parse_sampling_method()
+
+        self.parse_method()
 
         mainfile_md_steps = mainfile_parser.get('md_step')
         if mainfile_md_steps is not None:
@@ -288,7 +313,7 @@ class OpenmxParser(FairdiParser):
 
                 scc = run.m_create(SCC)
                 scc.single_configuration_calculation_to_system_ref = system
-                scc.single_configuration_to_calculation_method_ref = method
+                scc.single_configuration_to_calculation_method_ref = run.section_method[-1]
                 scf_steps = md_step.get('SCF')
                 if scf_steps is not None:
                     for scf_step in scf_steps:
