@@ -41,7 +41,6 @@ This is parser for OpenMX DFT code.
 A = (1 * units.angstrom).to_base_units().magnitude
 
 scf_step_parser = UnstructuredTextFileParser(quantities=[
-    Quantity('scf_step_number', r'   SCF=\s*(\d+)', repeats=False),
     Quantity('NormRD', r'NormRD=\s*([\d\.]+)', repeats=False),
     Quantity('Uele', r'Uele=\s*([-\d\.]+)', repeats=False)
 ])
