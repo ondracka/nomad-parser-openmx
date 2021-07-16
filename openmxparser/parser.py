@@ -222,8 +222,10 @@ class OpenmxParser(FairdiParser):
             kpoints = values.get('kpoints')
             if kpoints is not None:
                 eigenvalues.eigenvalues_kpoints = kpoints
+                eigenvalues.number_of_eigenvalues_kpoints = len(kpoints)
             else:
                 eigenvalues.eigenvalues_kpoints = [[0, 0, 0]]
+                eigenvalues.number_of_eigenvalues_kpoints = 1
             values = values.get('eigenvalues')
             if values is not None:
                 if self.spinpolarized:
@@ -231,6 +233,7 @@ class OpenmxParser(FairdiParser):
                 else:
                     values = [i[0:1] for i in values]
                     eigenvalues.eigenvalues_values = np.stack(values, axis=1) * units.hartree
+                eigenvalues.number_of_eigenvalues = len(values[0][0])
 
     def parse(self, mainfile: str, archive: EntryArchive, logger):
         self.archive = archive
