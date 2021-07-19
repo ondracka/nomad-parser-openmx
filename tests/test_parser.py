@@ -43,6 +43,10 @@ def K_to_J(value):
     return (value * units.joule * units.k).to_base_units().magnitude
 
 
+def HaB_to_N(value):
+    return (value * units.hartree / units.bohr).to_base_units().magnitude
+
+
 # default pytest.approx settings are abs=1e-12, rel=1e-6 so it doesn't work for small numbers
 # use the default just for comparison with zero
 def approx(value):
@@ -105,6 +109,9 @@ def test_AlN(parser):
     assert len(scc) == 5
     assert scc[0].energy_total.magnitude == approx(Ha_to_J(-25.194346653540))
     assert scc[4].energy_total.magnitude == approx(Ha_to_J(-25.194358042252))
+    assert np.shape(scc[0].atom_forces) == (4, 3)
+    assert scc[0].atom_forces[0][2].magnitude == approx(HaB_to_N(0.00139))
+    assert scc[4].atom_forces[3][2].magnitude == approx(HaB_to_N(-0.00018))
     scf = scc[0].section_scf_iteration
     assert len(scf) == 21
     scf[20].energy_sum_eigenvalues_scf_iteration == approx(-3.4038353611878345e-17)
@@ -188,6 +195,9 @@ def test_C2N2(parser):
     assert len(scc) == 100
     assert scc[0].temperature.magnitude == approx(300.0)
     assert scc[99].temperature.magnitude == approx(46.053)
+    assert np.shape(scc[0].atom_forces) == (4, 3)
+    assert scc[0].atom_forces[0][0].magnitude == approx(HaB_to_N(0.10002))
+    assert scc[99].atom_forces[2][2].magnitude == approx(HaB_to_N(-0.00989))
 
     assert len(run.section_system) == 100
 

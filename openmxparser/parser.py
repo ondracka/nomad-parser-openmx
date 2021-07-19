@@ -113,8 +113,9 @@ def read_md_file(md_file):
                 step_header = True
                 natoms = int(line_list[0])
                 result.append({'species': [],
-                               'positions': np.empty((natoms, 3)),
-                               'velocities': np.empty((natoms, 3))})
+                               'positions': np.empty((natoms, 3), dtype=np.float64),
+                               'velocities': np.empty((natoms, 3), dtype=np.float64),
+                               'forces': np.empty((natoms, 3), dtype=np.float64)})
                 atomindex = 0
             elif step_header:
                 cell_vectors = cell_vectors_re.search(line)
@@ -129,6 +130,8 @@ def read_md_file(md_file):
             else:
                 result[-1]['positions'][atomindex][0:3] = [
                     float(val) for val in line_list[1:4]]
+                result[-1]['forces'][atomindex][0:3] = [
+                    float(val) for val in line_list[4:7]]
                 result[-1]['velocities'][atomindex][0:3] = [
                     float(val) for val in line_list[7:10]]
                 result[-1]['species'].append(line_list[0])
@@ -358,6 +361,9 @@ class OpenmxParser(FairdiParser):
                 if u_tot is not None:
                     scc.energy_total = u_tot * units.hartree
                 if not ignore_md_file:
+                    forces = mdfile_md_steps[i].get('forces')
+                    if forces is not None:
+                        scc.atom_forces = forces * units.hartree / units.bohr
                     temperature = mdfile_md_steps[i].get('temperature')
                     if temperature is not None:
                         scc.temperature = temperature * units.kelvin
