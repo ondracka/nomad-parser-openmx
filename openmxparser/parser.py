@@ -102,7 +102,7 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
 ])
 
 
-def parse_md_file(md_file):
+def read_md_file(md_file):
     result = []
     with open(md_file, 'r') as f:
         cell_vectors_re = re.compile(r'Cell_Vectors=((?:\s+-?\d+\.\d+)+)')
@@ -135,6 +135,55 @@ def parse_md_file(md_file):
                 atomindex += 1
     f.close()
     return result
+
+
+def parse_md_file(i, mdfile_md_steps, system):
+    cell = mdfile_md_steps[i].get('cell_vectors')
+    system.lattice_vectors = cell * units.angstrom
+    system.configuration_periodic_dimensions = [True, True, True]
+    positions = mdfile_md_steps[i].get('positions')
+    system.atom_positions = positions * units.angstrom
+    system.atom_labels = mdfile_md_steps[i].get('species')
+    system.velocities = mdfile_md_steps[i].get('velocities') * units.meter / units.second
+
+
+def parse_structure(system, logger):
+    atoms_units = mainfile_parser.get('Atoms.SpeciesAndCoordinates.Unit')
+    lattice_vectors = mainfile_parser.get('input_lattice_vectors')
+    lattice_units = mainfile_parser.get('Atoms.UnitVectors.Unit')
+    atoms = mainfile_parser.get('atoms').get('atom')
+
+    if atoms is not None and lattice_vectors is not None:
+        lattice_vectors = np.array(lattice_vectors).reshape(3, 3)
+        if atoms_units is not None:
+            if lattice_units.lower() == 'au':
+                lattice_vectors = lattice_vectors * units.bohr
+                lattice_units = units.bohr
+            elif lattice_units.lower() == 'ang':
+                lattice_vectors = lattice_vectors * units.angstrom
+                lattice_units = units.angstrom
+        else:
+            lattice_vectors = lattice_vectors * units.angstrom
+        atom_positions = [a[1:4] for a in atoms]
+        if atoms_units is not None:
+            if atoms_units.lower() == 'au':
+                atom_positions = atom_positions * units.bohr
+            if atoms_units.lower() == 'ang':
+                atom_positions = atom_positions * units.angstrom
+            elif atoms_units.lower() == 'frac':
+                # There are some problems with pint here so simple matrix vector multiplications
+                # doesn't work.
+                atom_positions = np.array([np.array(pos).dot(lattice_vectors)
+                                          for pos in atom_positions]) * lattice_units
+        else:
+            # default unit is angstrom
+            atom_positions = atom_positions * units.angstrom
+        system.atom_positions = atom_positions
+        system.lattice_vectors = lattice_vectors
+        system.configuration_periodic_dimensions = [True, True, True]
+        system.atom_labels = [a[0] for a in atoms]
+    else:
+        logger.warning('Failed to parse the input structure.')
 
 
 class OpenmxParser(FairdiParser):
@@ -246,7 +295,7 @@ class OpenmxParser(FairdiParser):
         # Get system from the MD file
         md_file = path.splitext(mainfile)[0] + '.md'
         if path.isfile(md_file):
-            mdfile_md_steps = parse_md_file(md_file)
+            mdfile_md_steps = read_md_file(md_file)
         else:
             mdfile_md_steps = None
 
@@ -290,51 +339,10 @@ class OpenmxParser(FairdiParser):
             for i, md_step in enumerate(mainfile_md_steps):
                 system = run.m_create(System)
                 if not ignore_md_file:
-                    cell = mdfile_md_steps[i].get('cell_vectors')
-                    system.lattice_vectors = cell * units.angstrom
-                    system.configuration_periodic_dimensions = [True, True, True]
-                    positions = mdfile_md_steps[i].get('positions')
-                    system.atom_positions = positions * units.angstrom
-                    system.atom_labels = mdfile_md_steps[i].get('species')
-                    system.velocities = mdfile_md_steps[i].get('velocities') * units.meter / units.second
+                    parse_md_file(i, mdfile_md_steps, system)
                 elif i == 0:
                     # Get the initial position from out file as a fallback if the md file is missing.
-                    atoms_units = mainfile_parser.get('Atoms.SpeciesAndCoordinates.Unit')
-                    lattice_vectors = mainfile_parser.get('input_lattice_vectors')
-                    lattice_units = mainfile_parser.get('Atoms.UnitVectors.Unit')
-                    atoms = mainfile_parser.get('atoms').get('atom')
-
-                    if atoms is not None and lattice_vectors is not None:
-                        lattice_vectors = np.array(lattice_vectors).reshape(3, 3)
-                        if atoms_units is not None:
-                            if lattice_units.lower() == 'au':
-                                lattice_vectors = lattice_vectors * units.bohr
-                                lattice_units = units.bohr
-                            elif lattice_units.lower() == 'ang':
-                                lattice_vectors = lattice_vectors * units.angstrom
-                                lattice_units = units.angstrom
-                        else:
-                            lattice_vectors = lattice_vectors * units.angstrom
-                        atom_positions = [a[1:4] for a in atoms]
-                        if atoms_units is not None:
-                            if atoms_units.lower() == 'au':
-                                atom_positions = atom_positions * units.bohr
-                            if atoms_units.lower() == 'ang':
-                                atom_positions = atom_positions * units.angstrom
-                            elif atoms_units.lower() == 'frac':
-                                # There are some problems with pint here so simple matrix vector multiplications
-                                # doesn't work.
-                                atom_positions = np.array([np.array(pos).dot(lattice_vectors)
-                                                          for pos in atom_positions]) * lattice_units
-                        else:
-                            # default unit is angstrom
-                            atom_positions = atom_positions * units.angstrom
-                        system.atom_positions = atom_positions
-                        system.lattice_vectors = lattice_vectors
-                        system.configuration_periodic_dimensions = [True, True, True]
-                        system.atom_labels = [a[0] for a in atoms]
-                    else:
-                        logger.warning('Failed to parse the input structure.')
+                    parse_structure(system, logger)
 
                 scc = run.m_create(SCC)
                 scc.single_configuration_calculation_to_system_ref = system
