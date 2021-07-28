@@ -127,6 +127,8 @@ def test_AlN(parser):
     assert method.smearing_width == approx(K_to_J(300))
     assert section_XC_functionals1.XC_functional_name == 'GGA_C_PBE'
     assert section_XC_functionals2.XC_functional_name == 'GGA_X_PBE'
+    assert method.scf_max_iteration == 100
+    assert method.scf_threshold_energy_change.magnitude == approx(Ha_to_J(1e-7))
 
     sampling_method = run.section_sampling_method
     assert len(sampling_method) == 1
@@ -248,6 +250,8 @@ def test_CrO2(parser):
     assert method.smearing_width == approx(K_to_J(500))
     assert method.section_XC_functionals[0].XC_functional_name == 'LDA_X'
     assert method.section_XC_functionals[1].XC_functional_name == 'LDA_C_PW'
+    assert method.scf_max_iteration == 40
+    assert method.scf_threshold_energy_change.magnitude == approx(Ha_to_J(1e-7))
 
     eigenvalues = run.section_single_configuration_calculation[-1].section_eigenvalues[0]
     assert eigenvalues.eigenvalues_kind == 'normal'

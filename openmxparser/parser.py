@@ -93,6 +93,8 @@ mainfile_parser = UnstructuredTextFileParser(quantities=[
     Quantity('scf.Hubbard.U', r'(?i)scf.Hubbard.U\s+(on|off)', repeats=False),
     Quantity('MD.Type', r'(?i)MD\.Type\s+([a-z_\d]{3,6})', repeats=False),
     Quantity('MD.Opt.criterion', r'(?i)MD\.Opt\.criterion\s+([\d\.e-]+)', repeats=False),
+    Quantity('scf.maxIter', r'scf.maxIter\s+(\d+)', repeats=False),
+    Quantity('scf.criterion', r'scf.criterion\s+([-\.eE\d]+)', repeats=False),
     Quantity('scf.ElectronicTemperature', r'scf.ElectronicTemperature\s+(\S+)', repeats=False),
     Quantity('have_timing', r'Computational Time \(second\)([\s\S]+)Others.+', repeats=False),
     Quantity(
@@ -265,6 +267,14 @@ class OpenmxParser(FairdiParser):
             method.smearing_width = (scf_ElectronicTemperature * units.kelvin * units.k).to_base_units().magnitude
         else:
             method.smearing_width = (300 * units.kelvin * units.k).to_base_units().magnitude
+
+        scf_maxiter = mainfile_parser.get('scf.maxIter')
+        if scf_maxiter is not None:
+            method.scf_max_iteration = scf_maxiter
+
+        scf_criterion = mainfile_parser.get('scf.criterion')
+        if scf_criterion is not None:
+            method.scf_threshold_energy_change = scf_criterion * units.hartree
 
     def parse_eigenvalues(self):
         eigenvalues = self.archive.section_run[-1].section_single_configuration_calculation[-1].m_create(section_eigenvalues)
